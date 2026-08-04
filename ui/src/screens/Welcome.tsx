@@ -1,6 +1,7 @@
 import { Globe, KeyRound, MoveRight, RotateCcw, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import AppNavigation from '../components/AppNavigation'
+import MeshLogo from '../components/MeshLogo'
 import MeshMark from '../components/MeshMark'
 import MeshViz from '../components/MeshViz'
 import { Card, ReassuranceLine } from '../components/ui'
@@ -67,9 +68,7 @@ export default function Welcome({
       <div className="relative flex min-h-0 grow flex-col items-center justify-center overflow-hidden">
         <MeshViz variant="ambient" className="absolute inset-0 h-full w-full opacity-60" />
         <div className="relative z-10 flex w-full max-w-2xl flex-col items-center gap-8 px-8">
-          <div className="flex items-center gap-2.5 font-mono text-lg text-accent">
-            <MeshMark size={22} /> mesh
-          </div>
+          <MeshLogo className="w-24" />
 
           {showResume && lastConfig && (
             <div

@@ -131,25 +131,12 @@
   }
   .badge-row::after { transform: scaleX(-1); }
 
-  /* chrome headline, ALT-1977 style */
-  h1.wordmark {
-    font-family: "Righteous", sans-serif;
-    font-size: clamp(3.4rem, 10vw, 6.5rem);
-    letter-spacing: .05em;
-    line-height: .95;
-    transform: skewX(-6deg);
-    background: linear-gradient(180deg,
-      #fffbe8 0%, #fce9b0 28%, #e8b45a 42%,
-      #7c3a10 50%, #f9dd9a 54%,
-      #fff3cf 68%, #d99a3c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter:
-      drop-shadow(2px 2px 0 var(--ink))
-      drop-shadow(5px 5px 0 var(--red))
-      drop-shadow(9px 9px 0 rgba(0,0,0,.45));
-    margin-bottom: 1rem;
+  .brand-logo {
+    display: block;
+    width: min(260px, 58vw);
+    height: auto;
+    margin: 0 auto 1rem;
+    filter: drop-shadow(7px 7px 0 rgba(0,0,0,.4));
   }
 
   .tagline {
@@ -586,7 +573,7 @@
     <!-- HERO -->
     <header class="hero">
       <div class="badge-row">est. your living room</div><br>
-      <h1 class="wordmark">Mesh.app</h1>
+      <img class="brand-logo" src="assets/mesh-logo-dark.png" alt="Mesh">
       <p class="tagline">Share compute with your friends —<br>hosting AI isn’t easy, so <em>do it together</em>.</p>
       <p class="sub">Mesh is a desktop app that pools GPUs across the machines you and your friends already own, and serves local models to your favourite agents. No cloud. No API keys. Just the mesh.</p>
 

@@ -1,5 +1,5 @@
 import { Home, MessageSquare, Settings } from 'lucide-react'
-import MeshMark from './MeshMark'
+import MeshLogo from './MeshLogo'
 
 interface AppNavigationProps {
   current: 'home' | 'chat'
@@ -25,10 +25,7 @@ export default function AppNavigation({
       className="flex h-12 shrink-0 items-center border-b border-edge bg-panel px-4"
       data-testid="app-navigation"
     >
-      <div className="mr-6 flex items-center gap-2 font-mono text-sm font-semibold text-accent">
-        <MeshMark size={17} />
-        Mesh
-      </div>
+      <MeshLogo variant="mark" className="mr-6 w-[28px]" />
       <nav className="flex h-full items-center gap-1" aria-label="Main navigation">
         <NavButton active={current === 'home'} onClick={onHome} icon={Home} testId="nav-home">
           Home
