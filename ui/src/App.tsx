@@ -39,7 +39,15 @@ export default function App() {
   // the phase is 'running' (see the effect below).
   const [pendingShare, setPendingShare] = useState<string | null>(null)
   const [pendingSwitch, setPendingSwitch] = useState<LaunchConfig | null>(null)
+  const pendingSwitchRef = useRef<LaunchConfig | null>(null)
+  const switchRequestId = useRef(0)
   const [switching, setSwitching] = useState(false)
+
+  const setSwitchRequest = (config: LaunchConfig | null) => {
+    pendingSwitchRef.current = config
+    switchRequestId.current += 1
+    setPendingSwitch(config)
+  }
 
   useEffect(() => {
     connect()
@@ -74,6 +82,12 @@ export default function App() {
     const t = setTimeout(() => setView({ name: 'join', prefillToken: token }), 0)
     return () => clearTimeout(t)
   }, [lastNodeEvent])
+
+  useEffect(() => {
+    if (phase.phase === 'running' || switching || !pendingSwitchRef.current) return
+    const timer = setTimeout(() => setSwitchRequest(null), 0)
+    return () => clearTimeout(timer)
+  }, [phase.phase, switching])
 
   // Apply a queued passive→contributor upgrade once the connection is up.
   // No cleanup-cancellation here: the shutdown we issue flips the phase, which
@@ -142,19 +156,21 @@ export default function App() {
 
   const requestLaunch = (config: LaunchConfig) => {
     if (phase.phase === 'running') {
-      setPendingSwitch(config)
+      setSwitchRequest(config)
       return
     }
     launch(config)
   }
 
   const confirmSwitch = async () => {
-    if (!pendingSwitch || switching) return
-    const config = pendingSwitch
+    if (!pendingSwitchRef.current || switching) return
+    const config = pendingSwitchRef.current
+    const requestId = switchRequestId.current
     setSwitching(true)
     try {
       await appApi.shutdown()
-      setPendingSwitch(null)
+      if (requestId !== switchRequestId.current || pendingSwitchRef.current !== config) return
+      setSwitchRequest(null)
       launch(config)
     } finally {
       setSwitching(false)
@@ -203,8 +219,9 @@ export default function App() {
         <SwitchMeshDialog
           currentName={activeMesh.name}
           destination={destinationLabel}
-          onCancel={() => setPendingSwitch(null)}
+          onCancel={() => setSwitchRequest(null)}
           onConfirm={() => void confirmSwitch()}
+          busy={switching}
         />
       )}
     </>

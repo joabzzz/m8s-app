@@ -11,7 +11,7 @@ export default function MeshMark({
   return (
     <svg
       width={size}
-      height={size}
+      height={(size * 350) / 520}
       viewBox="0 0 520 350"
       fill="currentColor"
       className={className}

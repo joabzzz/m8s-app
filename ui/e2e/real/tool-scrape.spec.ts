@@ -67,7 +67,17 @@ test('the agent fetches a local page with web_scrape and completes the turn', as
 
   await page.goto('/')
   await expect(page.getByTestId('mesh-name')).toBeVisible({ timeout: 60_000 })
-  await expect(page.getByText('Auto routing')).toBeVisible({ timeout: 60_000 })
+  await expect
+    .poll(
+      async () => {
+        const response = await fetch(`${baseURL}/v1/models`)
+        if (!response.ok) return 0
+        return ((await response.json()) as { data?: unknown[] }).data?.length ?? 0
+      },
+      { timeout: 60_000 },
+    )
+    .toBeGreaterThan(0)
+  await expect(page.getByTestId('chat-send')).toBeVisible()
 
   // Desktop chat intentionally always uses auto routing.
   const model = process.env.MESH_TOOL_TEST_MODEL

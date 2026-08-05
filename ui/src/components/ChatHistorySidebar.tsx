@@ -139,5 +139,7 @@ function ChatRow({
 function formatDate(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value || 'now'
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = 'numeric'
+  return new Intl.DateTimeFormat(undefined, options).format(date)
 }

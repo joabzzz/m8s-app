@@ -50,16 +50,19 @@ export default function Main({ onOpenSettings, onGoHome, onStartSharing }: MainP
     try {
       const result = await listChatSessions()
       setSessionsSupported(true)
-      let available = result.sessions
+      let available = result.sessions.filter((session) => !session.archived)
       if (available.length === 0) {
         const created = await createChatSession()
         available = [created]
       }
       setSessions(available)
       const preferred = loadActiveChatId()
+      const activeFromBackend = available.some((session) => session.id === result.active_session_id)
+        ? result.active_session_id
+        : null
       const active =
         (preferred && available.some((session) => session.id === preferred) && preferred) ||
-        result.active_session_id ||
+        activeFromBackend ||
         available[0]?.id ||
         null
       setActiveSessionId(active)
@@ -75,7 +78,12 @@ export default function Main({ onOpenSettings, onGoHome, onStartSharing }: MainP
 
   useEffect(() => {
     const timer = setTimeout(() => void refreshSessions(), 0)
-    return () => clearTimeout(timer)
+    const refresh = () => void refreshSessions()
+    window.addEventListener('mesh-chat-sessions-changed', refresh)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('mesh-chat-sessions-changed', refresh)
+    }
   }, [refreshSessions])
 
   useEffect(() => {
@@ -112,6 +120,7 @@ export default function Main({ onOpenSettings, onGoHome, onStartSharing }: MainP
           setActiveSessionId(next.id)
         } else {
           const created = await createChatSession()
+          saveActiveChatId(created.id)
           setActiveSessionId(created.id)
         }
       }

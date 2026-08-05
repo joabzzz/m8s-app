@@ -164,15 +164,11 @@ async fn app_chat(State(state): State<Arc<AppState>>, Json(req): Json<ChatReques
             Err(err) => return session_error(err),
         },
     };
-    let handle = match agent::ensure_agent(&state, &req.model, &session_id).await {
-        Ok(handle) => handle,
+    // Agent selection and turn acquisition are atomic with session lifecycle
+    // mutations. The owned guard rides in the streaming task.
+    let (handle, turn_guard) = match agent::begin_turn(&state, &req.model, &session_id).await {
+        Ok(prepared) => prepared,
         Err(err) => return session_error(err),
-    };
-
-    // One turn at a time: a concurrent reply on the same session would
-    // interleave its history. The owned guard rides in the streaming task.
-    let Ok(turn_guard) = handle.turn_lock.clone().try_lock_owned() else {
-        return (StatusCode::CONFLICT, Json(json!({ "error": "busy" }))).into_response();
     };
 
     let cancel = handle.cancel_root.child_token();
@@ -220,17 +216,7 @@ async fn app_sessions() -> Response {
 }
 
 async fn app_create_session(State(state): State<Arc<AppState>>) -> Response {
-    if state
-        .agent
-        .lock()
-        .await
-        .as_ref()
-        .is_some_and(|handle| handle.turn_lock.try_lock().is_err())
-    {
-        return (StatusCode::CONFLICT, Json(json!({ "error": "busy" }))).into_response();
-    }
-    crate::agent::teardown(&state).await;
-    match crate::agent::create_session().await {
+    match crate::agent::create_session_while_idle(&state).await {
         Ok(session) => (StatusCode::CREATED, Json(session)).into_response(),
         Err(err) => session_error(err),
     }
@@ -276,16 +262,14 @@ async fn app_session_history(Path(id): Path<String>) -> Response {
     }
 }
 
-fn session_error(err: anyhow::Error) -> Response {
-    let message = format!("{err:#}");
-    let status = if message.contains("busy") {
-        StatusCode::CONFLICT
-    } else if message.contains("session_not_found") || message.contains("not found") {
-        StatusCode::NOT_FOUND
-    } else {
-        StatusCode::INTERNAL_SERVER_ERROR
+fn session_error(err: impl Into<crate::agent::SessionError>) -> Response {
+    let err = err.into();
+    let status = match &err {
+        crate::agent::SessionError::Busy => StatusCode::CONFLICT,
+        crate::agent::SessionError::NotFound => StatusCode::NOT_FOUND,
+        crate::agent::SessionError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
     };
-    (status, Json(json!({ "error": message }))).into_response()
+    (status, Json(json!({ "error": err.to_string() }))).into_response()
 }
 
 /// The persisted conversation, shaped for the chat UI to repaint on launch.
@@ -299,8 +283,7 @@ async fn app_history() -> Response {
 /// and drop the live agent so it re-reads the (now absent) pointer. The old
 /// conversation stays in goose's store, just no longer the active one.
 async fn app_new_chat(State(state): State<Arc<AppState>>) -> Response {
-    crate::agent::teardown(&state).await;
-    match crate::agent::create_session().await {
+    match crate::agent::create_session_while_idle(&state).await {
         Ok(session) => Json(json!({ "ok": true, "session_id": session.id })).into_response(),
         Err(err) => session_error(err),
     }

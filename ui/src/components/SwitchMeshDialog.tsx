@@ -6,6 +6,7 @@ interface SwitchMeshDialogProps {
   destination: string
   onCancel: () => void
   onConfirm: () => void
+  busy?: boolean
 }
 
 export default function SwitchMeshDialog({
@@ -13,6 +14,7 @@ export default function SwitchMeshDialog({
   destination,
   onCancel,
   onConfirm,
+  busy = false,
 }: SwitchMeshDialogProps) {
   return (
     <div
@@ -21,7 +23,9 @@ export default function SwitchMeshDialog({
       aria-modal="true"
       aria-labelledby="switch-mesh-title"
       data-testid="switch-mesh-dialog"
-      onClick={onCancel}
+      onClick={() => {
+        if (!busy) onCancel()
+      }}
     >
       <div
         className="w-full max-w-md rounded-(--radius-card) border border-edge bg-panel p-6 shadow-2xl"
@@ -43,6 +47,7 @@ export default function SwitchMeshDialog({
           </div>
           <button
             onClick={onCancel}
+            disabled={busy}
             aria-label="Cancel switch"
             className="text-ink-faint hover:text-ink"
           >
@@ -53,11 +58,11 @@ export default function SwitchMeshDialog({
           Your local chats stay saved and will still be here after the switch.
         </p>
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel} disabled={busy}>
             Cancel
           </Button>
-          <Button data-testid="switch-mesh-confirm" onClick={onConfirm}>
-            Switch mesh
+          <Button data-testid="switch-mesh-confirm" onClick={onConfirm} disabled={busy}>
+            {busy ? 'Switching…' : 'Switch mesh'}
           </Button>
         </div>
       </div>

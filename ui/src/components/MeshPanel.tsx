@@ -87,7 +87,7 @@ export default function MeshPanel({
     ]
   }, [peers, self])
 
-  const shown = useMemo(() => {
+  const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
     return devices
       .filter((device) => {
@@ -105,12 +105,11 @@ export default function MeshPanel({
         if (filter === 'capable') return (b.vramGb ?? 0) - (a.vramGb ?? 0)
         return a.name.localeCompare(b.name)
       })
-      .slice(0, MAX_VISIBLE_DEVICES)
   }, [devices, filter, query])
-
+  const shown = filtered.slice(0, MAX_VISIBLE_DEVICES)
   const hosts = shown.filter((device) => device.host)
   const participants = shown.filter((device) => !device.host)
-  const hiddenCount = Math.max(0, devices.length - shown.length)
+  const hiddenCount = Math.max(0, filtered.length - shown.length)
 
   if (collapsed) {
     return (

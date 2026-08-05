@@ -1,5 +1,3 @@
-import type { HistoryMessage } from './types'
-
 export interface ChatSessionSummary {
   id: string
   title?: string
@@ -71,18 +69,6 @@ export async function setChatArchived(id: string, archived: boolean): Promise<vo
   if (!response.ok) throw new Error(`archive session failed (${response.status})`)
 }
 
-export async function loadChatHistory(id: string): Promise<HistoryMessage[]> {
-  const response = await fetch(`/app/sessions/${encodeURIComponent(id)}/history`)
-  if (!response.ok) throw new Error(`history request failed (${response.status})`)
-  return response.json() as Promise<HistoryMessage[]>
-}
-
 function normalizeSession(session: ChatSessionSummary): ChatSessionSummary {
   return { ...session, title: session.title || session.name || 'New chat' }
-}
-
-export function titleFromMessages(messages: HistoryMessage[]): string {
-  const first = messages.find((message) => message.role === 'user')?.text.trim()
-  if (!first) return 'New chat'
-  return first.length > 42 ? `${first.slice(0, 42).trimEnd()}…` : first
 }

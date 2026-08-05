@@ -65,9 +65,12 @@ export default function Welcome({
         onChat={() => onReturnToChat?.()}
         onSettings={onOpenSettings}
       />
-      <div className="relative flex min-h-0 grow flex-col items-center justify-center overflow-hidden">
-        <MeshViz variant="ambient" className="absolute inset-0 h-full w-full opacity-60" />
-        <div className="relative z-10 flex w-full max-w-2xl flex-col items-center gap-8 px-8">
+      <div className="relative min-h-0 grow overflow-y-auto">
+        <MeshViz
+          variant="ambient"
+          className="pointer-events-none fixed inset-x-0 top-12 bottom-0 h-[calc(100vh-3rem)] w-full opacity-60"
+        />
+        <div className="relative z-10 mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-8 px-8 py-8">
           <MeshLogo className="w-24" />
 
           {showResume && lastConfig && (

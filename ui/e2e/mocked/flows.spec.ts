@@ -146,6 +146,15 @@ test('choosing another mesh confirms before shutdown and relaunch', async ({ pag
         .length,
   )
   expect(shutdownCount).toBe(1)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __mockState: { joinCalls: unknown[] } }).__mockState.joinCalls
+            .length,
+      ),
+    )
+    .toBe(1)
 })
 
 test('main window offers "start sharing" to a public chat-only client', async ({ page }) => {

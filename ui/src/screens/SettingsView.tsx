@@ -32,6 +32,7 @@ const THEME_OPTIONS: Array<{ id: ThemePref; label: string; Icon: typeof Sun; hin
 export default function SettingsView({ onClose, onLeave }: SettingsViewProps) {
   const { phase, status } = useApp()
   const [archivedChats, setArchivedChats] = useState<ChatSessionSummary[]>([])
+  const [restoreError, setRestoreError] = useState<string | null>(null)
 
   useEffect(() => {
     void listChatSessions()
@@ -40,8 +41,14 @@ export default function SettingsView({ onClose, onLeave }: SettingsViewProps) {
   }, [])
 
   const restoreChat = async (id: string) => {
-    await setChatArchived(id, false)
-    setArchivedChats((sessions) => sessions.filter((session) => session.id !== id))
+    setRestoreError(null)
+    try {
+      await setChatArchived(id, false)
+      setArchivedChats((sessions) => sessions.filter((session) => session.id !== id))
+      window.dispatchEvent(new Event('mesh-chat-sessions-changed'))
+    } catch {
+      setRestoreError('Could not restore that chat. Please try again.')
+    }
   }
   const running = phase.phase === 'running' ? phase : null
   const hostname = status?.my_hostname ?? status?.hostname
@@ -122,6 +129,11 @@ export default function SettingsView({ onClose, onLeave }: SettingsViewProps) {
           <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider text-ink-faint uppercase">
             <History size={13} aria-hidden /> Archived chats
           </div>
+          {restoreError && (
+            <p className="mt-3 text-[12px] text-bad" role="alert">
+              {restoreError}
+            </p>
+          )}
           {archivedChats.length === 0 ? (
             <p className="mt-3 text-[12px] text-ink-faint">No archived chats.</p>
           ) : (

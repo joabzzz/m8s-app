@@ -18,9 +18,9 @@ export interface MockOptions {
   /** Seed GET /app/pending_invite (one-shot), simulating a mesh:// invite
    *  link that launched the app before the frontend was listening. */
   pendingInvite?: string
+  peers?: Array<Record<string, unknown>>
   /** Seed GET /app/history so the chat repaints a prior conversation on mount
    *  (simulates a persistent goose session surviving an app restart). */
-  peers?: Array<Record<string, unknown>>
   history?: Array<{
     id: string
     role: 'user' | 'assistant'
@@ -134,7 +134,7 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
       chatCalls: [] as Json[],
       newChatCalls: [] as Json[],
       // Goose-backed conversations exposed through the desktop session API.
-      history: (opts.history ?? []) as Json[],
+      histories: { 'mock-session-1': (opts.history ?? []) as Json[] } as Record<string, Json[]>,
       sessions: [
         {
           id: 'mock-session-1',
@@ -368,7 +368,7 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
         state.sessions.forEach((item) => (item.active = false))
         state.sessions.unshift(session)
         state.activeSessionId = id
-        state.history = []
+        state.histories[id] = []
         return json(session, 201)
       }
       const sessionMatch = path.match(/^\/app\/sessions\/([^/]+)\/(activate|history)$/)
@@ -377,7 +377,10 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
         state.sessions.forEach((item) => (item.active = item.id === state.activeSessionId))
         return json({ ok: true })
       }
-      if (sessionMatch?.[2] === 'history') return json(state.history)
+      if (sessionMatch?.[2] === 'history') {
+        const id = decodeURIComponent(sessionMatch[1])
+        return json(state.histories[id] ?? [])
+      }
       const archiveMatch = path.match(/^\/app\/sessions\/([^/]+)\/archive$/)
       if (archiveMatch) {
         const body = JSON.parse(String(init?.body ?? '{}'))
@@ -386,10 +389,10 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
         if (session) session.archived = body.archived !== false
         return json({ ok: true })
       }
-      if (path === '/app/history') return json(state.history)
+      if (path === '/app/history') return json(state.histories[state.activeSessionId] ?? [])
       if (path === '/app/new_chat') {
         state.newChatCalls.push({})
-        state.history = []
+        state.histories[state.activeSessionId] = []
         return json({ ok: true })
       }
       if (path === '/app/chat') {

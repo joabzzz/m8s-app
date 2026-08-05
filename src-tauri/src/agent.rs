@@ -23,12 +23,59 @@ use goose::session::session_manager::{Session, SessionManager, SessionType};
 use goose_providers::model::ModelConfig;
 use rmcp::model::Role;
 use serde_json::json;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{Mutex, OwnedMutexGuard, mpsc};
 use tokio_util::sync::CancellationToken;
 
 use crate::state::AppState;
 
 const PROJECT_ID: &str = "mesh-console";
+
+#[derive(Debug)]
+pub enum SessionError {
+    Busy,
+    NotFound,
+    Internal(anyhow::Error),
+}
+
+impl std::fmt::Display for SessionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Busy => f.write_str("busy"),
+            Self::NotFound => f.write_str("session_not_found"),
+            Self::Internal(err) => write!(f, "{err:#}"),
+        }
+    }
+}
+
+impl std::error::Error for SessionError {}
+
+impl From<anyhow::Error> for SessionError {
+    fn from(err: anyhow::Error) -> Self {
+        Self::Internal(err)
+    }
+}
+
+type SessionResult<T> = Result<T, SessionError>;
+
+async fn owned_session(
+    manager: &SessionManager,
+    id: &str,
+    include_messages: bool,
+) -> SessionResult<Session> {
+    let owned = manager
+        .list_all_sessions()
+        .await
+        .map_err(SessionError::Internal)?
+        .into_iter()
+        .any(|session| session.id == id && session.project_id.as_deref() == Some(PROJECT_ID));
+    if !owned {
+        return Err(SessionError::NotFound);
+    }
+    manager
+        .get_session(id, include_messages)
+        .await
+        .map_err(SessionError::Internal)
+}
 
 /// Everything a chat turn needs from the running agent. All fields are cheap
 /// clones; the handle is cloned out of the `AppState` lock so no guard is ever
@@ -187,54 +234,77 @@ pub async fn create_session() -> anyhow::Result<SessionSummary> {
     Ok(session_summary(session, Some(&id)))
 }
 
-pub async fn archive_session(state: &AppState, id: &str, archived: bool) -> anyhow::Result<()> {
+pub async fn archive_session(state: &AppState, id: &str, archived: bool) -> SessionResult<()> {
     let manager = SessionManager::instance();
-    let session = manager.get_session(id, false).await?;
-    if session.project_id.as_deref() != Some(PROJECT_ID) {
-        anyhow::bail!("session_not_found");
-    }
-    if state
-        .agent
-        .lock()
-        .await
+    let mut agent_guard = state.agent.lock().await;
+    owned_session(&manager, id, false).await?;
+    let turn_guard = if let Some(handle) = agent_guard
         .as_ref()
-        .is_some_and(|handle| handle.session_id == id && handle.turn_lock.try_lock().is_err())
+        .filter(|handle| handle.session_id == id)
     {
-        anyhow::bail!("busy");
-    }
+        Some(
+            handle
+                .turn_lock
+                .clone()
+                .try_lock_owned()
+                .map_err(|_| SessionError::Busy)?,
+        )
+    } else {
+        None
+    };
     manager
         .update(id)
         .archived_at(archived.then(chrono::Utc::now))
         .apply()
-        .await?;
+        .await
+        .map_err(SessionError::Internal)?;
     if archived && load_session_pointer().as_deref() == Some(id) {
         clear_session_pointer();
-        teardown(state).await;
+        if let Some(handle) = agent_guard.take() {
+            handle.cancel_root.cancel();
+        }
     }
+    drop(turn_guard);
     Ok(())
 }
 
-pub async fn activate_session(state: &AppState, id: &str) -> anyhow::Result<()> {
+pub async fn activate_session(state: &AppState, id: &str) -> SessionResult<()> {
     let manager = SessionManager::instance();
-    let session = manager.get_session(id, false).await?;
-    if session.project_id.as_deref() != Some(PROJECT_ID) || session.archived_at.is_some() {
-        anyhow::bail!("session_not_found");
+    let mut agent_guard = state.agent.lock().await;
+    let session = owned_session(&manager, id, false).await?;
+    if session.archived_at.is_some() {
+        return Err(SessionError::NotFound);
     }
 
-    let mut guard = state.agent.lock().await;
-    if let Some(handle) = guard.as_ref() {
+    if let Some(handle) = agent_guard.as_ref() {
         if handle.session_id == id {
             save_session_pointer(id);
             return Ok(());
         }
-        if handle.turn_lock.try_lock().is_err() {
-            anyhow::bail!("busy");
-        }
+        let _turn_guard = handle
+            .turn_lock
+            .clone()
+            .try_lock_owned()
+            .map_err(|_| SessionError::Busy)?;
         handle.cancel_root.cancel();
     }
-    *guard = None;
+    *agent_guard = None;
     save_session_pointer(id);
     Ok(())
+}
+
+pub async fn create_session_while_idle(state: &AppState) -> SessionResult<SessionSummary> {
+    let mut agent_guard = state.agent.lock().await;
+    if let Some(handle) = agent_guard.as_ref() {
+        let _turn_guard = handle
+            .turn_lock
+            .clone()
+            .try_lock_owned()
+            .map_err(|_| SessionError::Busy)?;
+        handle.cancel_root.cancel();
+    }
+    *agent_guard = None;
+    create_session().await.map_err(SessionError::Internal)
 }
 
 /// Build a goose Provider pointed at the embedded node's OpenAI-compatible
@@ -265,11 +335,29 @@ pub async fn ensure_agent(
     state: &Arc<AppState>,
     model: &str,
     session_id: &str,
-) -> anyhow::Result<AgentHandle> {
+) -> SessionResult<AgentHandle> {
+    ensure_agent_locked(state, model, session_id)
+        .await
+        .map(|(handle, _)| handle)
+}
+
+pub async fn begin_turn(
+    state: &Arc<AppState>,
+    model: &str,
+    session_id: &str,
+) -> SessionResult<(AgentHandle, OwnedMutexGuard<()>)> {
+    ensure_agent_locked(state, model, session_id).await
+}
+
+async fn ensure_agent_locked(
+    state: &Arc<AppState>,
+    model: &str,
+    session_id: &str,
+) -> SessionResult<(AgentHandle, OwnedMutexGuard<()>)> {
     let manager = SessionManager::instance();
-    let session = manager.get_session(session_id, false).await?;
-    if session.project_id.as_deref() != Some(PROJECT_ID) {
-        anyhow::bail!("session_not_found");
+    let session = owned_session(&manager, session_id, false).await?;
+    if session.archived_at.is_some() {
+        return Err(SessionError::NotFound);
     }
 
     let mut guard = state.agent.lock().await;
@@ -277,7 +365,7 @@ pub async fn ensure_agent(
         && handle.session_id != session_id
     {
         if handle.turn_lock.try_lock().is_err() {
-            anyhow::bail!("busy");
+            return Err(SessionError::Busy);
         }
         handle.cancel_root.cancel();
         *guard = None;
@@ -297,14 +385,20 @@ pub async fn ensure_agent(
                 .map_err(|e| anyhow::anyhow!("switch model: {e:#}"))?;
             handle.model = model.to_string();
         }
-        return Ok(handle.clone());
+        let handle = handle.clone();
+        let turn_guard = handle
+            .turn_lock
+            .clone()
+            .try_lock_owned()
+            .map_err(|_| SessionError::Busy)?;
+        return Ok((handle, turn_guard));
     }
 
     // goose roots all config/session state at GOOSE_PATH_ROOT (set in
     // init_process_defaults); make sure it exists before SessionManager
     // touches it.
     if let Some(root) = std::env::var_os("GOOSE_PATH_ROOT") {
-        std::fs::create_dir_all(&root)?;
+        std::fs::create_dir_all(&root).map_err(anyhow::Error::from)?;
     }
 
     let provider = build_mesh_provider(state.ports.api)?;
@@ -367,8 +461,13 @@ pub async fn ensure_agent(
         cancel_root: CancellationToken::new(),
         turn_lock: Arc::new(Mutex::new(())),
     };
+    let turn_guard = handle
+        .turn_lock
+        .clone()
+        .try_lock_owned()
+        .map_err(|_| SessionError::Busy)?;
     *guard = Some(handle.clone());
-    Ok(handle)
+    Ok((handle, turn_guard))
 }
 
 /// Tear down the agent (if any). Cancel-and-drop only: this also runs on

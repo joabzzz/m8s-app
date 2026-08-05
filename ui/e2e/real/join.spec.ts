@@ -72,7 +72,17 @@ test('a second instance joins via the invite token and chats over the mesh', asy
     .toBeGreaterThan(0)
 
   // Chat from the joiner routes over iroh to the host's model
-  await expect(page.getByText('Auto routing')).toBeVisible({ timeout: 60_000 })
+  await expect
+    .poll(
+      async () => {
+        const response = await fetch(`${joinerUrl}/v1/models`)
+        if (!response.ok) return 0
+        return ((await response.json()) as { data?: unknown[] }).data?.length ?? 0
+      },
+      { timeout: 60_000 },
+    )
+    .toBeGreaterThan(0)
+  await expect(page.getByTestId('chat-send')).toBeVisible()
   await page
     .getByTestId('chat-input')
     .fill('Reply with the single word: mesh. Do not use any tools.')
