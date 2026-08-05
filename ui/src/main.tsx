@@ -6,6 +6,22 @@ import './styles.css'
 
 initTheme()
 
+// Install before React mounts and use capture so WebKit never reaches its
+// native text-edit context menu (which otherwise appears as a stray “Paste”
+// popup over ordinary controls). Do not synthesize a click: WebKit still sends
+// the normal click event, and creating another one can double-activate buttons.
+window.addEventListener(
+  'contextmenu',
+  (event) => {
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return
+    if (target.closest('input, textarea, [contenteditable="true"], [data-native-context-menu]'))
+      return
+    event.preventDefault()
+  },
+  { capture: true },
+)
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

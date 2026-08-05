@@ -59,7 +59,17 @@ test('host a private mesh through the UI and chat with the real model', async ({
 
   // Chat with the real model
   await page.getByTestId('go-to-chat').click()
-  await expect(page.getByTestId('model-picker')).not.toHaveValue('', { timeout: 30_000 })
+  await expect
+    .poll(
+      async () => {
+        const response = await fetch('/v1/models')
+        if (!response.ok) return 0
+        return ((await response.json()) as { data?: unknown[] }).data?.length ?? 0
+      },
+      { timeout: 30_000 },
+    )
+    .toBeGreaterThan(0)
+  await expect(page.getByTestId('chat-send')).toBeVisible()
   await page.getByTestId('chat-input').fill('Say the word mesh.')
   await page.getByTestId('chat-send').click()
 

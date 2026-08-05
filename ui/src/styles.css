@@ -78,6 +78,25 @@ body {
   user-select: none;
 }
 
+.mesh-logo {
+  display: inline-block;
+  flex: none;
+}
+.mesh-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mesh-logo-light {
+  display: none !important;
+}
+html.light .mesh-logo-dark {
+  display: none !important;
+}
+html.light .mesh-logo-light {
+  display: block !important;
+}
+
 /* Vinyl backdrop: faint diagonal stripes + film grain, fixed behind the UI.
    Kept subtle so panels/chat stay readable; pure decoration, so both layers
    are pointer-transparent and aria-invisible. */

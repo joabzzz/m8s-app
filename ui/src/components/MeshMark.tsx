@@ -1,6 +1,4 @@
-/** The Mesh brand mark: a diamond node with orbiting link points — replaces
- *  the old `&#9671;` text glyph everywhere. Pure SVG so it inherits
- *  currentColor and scales crisply at any size. */
+/** The Mesh brand mark: five linked hexagons arranged as an M. */
 export default function MeshMark({
   size = 20,
   className = '',
@@ -13,28 +11,23 @@ export default function MeshMark({
   return (
     <svg
       width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
+      height={(size * 350) / 520}
+      viewBox="0 0 520 350"
+      fill="currentColor"
       className={className}
       aria-hidden
       focusable="false"
     >
-      <path
-        d="M12 3 L21 12 L12 21 L3 12 Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="2.2" fill="currentColor">
+      <g>
+        <polygon points="253.17,54 253.17,146 173.50,192 93.83,146 93.83,54 173.50,8" />
+        <polygon points="426.17,54 426.17,146 346.50,192 266.83,146 266.83,54 346.50,8" />
+        <polygon points="166.67,204 166.67,296 87,342 7.33,296 7.33,204 87,158" />
+        <polygon points="339.67,204 339.67,296 260,342 180.33,296 180.33,204 260,158" />
+        <polygon points="512.67,204 512.67,296 433,342 353.33,296 353.33,204 433,158" />
         {pulse && (
-          <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="1;0.45;1" dur="2s" repeatCount="indefinite" />
         )}
-      </circle>
-      <circle cx="12" cy="3" r="1.4" fill="currentColor" />
-      <circle cx="21" cy="12" r="1.4" fill="currentColor" />
-      <circle cx="12" cy="21" r="1.4" fill="currentColor" />
-      <circle cx="3" cy="12" r="1.4" fill="currentColor" />
+      </g>
     </svg>
   )
 }
