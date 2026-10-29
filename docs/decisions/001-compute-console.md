@@ -82,8 +82,8 @@ shown only for an attached running mesh; Home retains the current connection.
 Recent successful connections are persisted in a mode-0600 backend history file
 under the app's data root so they survive changes in the WebView origin/port.
 Private connections retain an invite for reconnecting to the same mesh rather
-than silently creating a fresh network. Expired/unreachable invites report join
-errors. The history is convenience state, not a rental authorization grant.
+than silently creating a fresh network. Reconnect checks current availability; the SDK may start a local client after
+its old bootstrap peers time out. That is not proof of remote model readiness. The history is convenience state, not a rental authorization grant.
 
 Home also scans Mesh's local runtime inventory and probes live loopback management
 endpoints. Joining a discovered mesh creates this app's client; it does not take
@@ -116,3 +116,12 @@ UI build/lint/formatting and all 38 mocked browser tests pass. Repeated native
 private/public start-stop checks with stdin explicitly inherited from /dev/tty
 also pass, confirming initialization removes the terminal input dependency.
 Recent meshes survived native restart (three saved test connections observed).
+
+A real saved-private-mesh reconnect also reached a local passive Running state
+after its old, stopped bootstrap peer exhausted retries (about two minutes).
+No inference hosts were present. The SDK currently logs that peer-join failure
+and still starts the local node; a shorter/cancellable peer-rejoin policy remains
+an upstream integration issue. The progress screen now describes network
+connection rather than model loading for all passive joins.
+Eight focused browser checks passed again after correcting passive reconnect
+progress and the connected-but-empty fleet message.

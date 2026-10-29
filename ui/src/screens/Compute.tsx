@@ -176,10 +176,12 @@ export default function Compute({
                   {connected ? 'Waiting for peers' : 'Bring your compute into view'}
                 </h3>
                 <p className="mx-auto mt-2 mb-6 max-w-sm text-sm text-ink-muted">
-                  Connect a mesh to see its hardware and models. Rental inventory will appear when
-                  the m8s controller is connected.
+                  {connected
+                    ? 'Your local node is connected. Invite another device to see its hardware and models here.'
+                    : 'Connect a mesh to see its hardware and models.'}{' '}
+                  Rental inventory will appear when the m8s controller is attached.
                 </p>
-                <Button onClick={onMesh}>Choose a mesh</Button>
+                <Button onClick={onMesh}>{connected ? 'Manage mesh' : 'Choose a mesh'}</Button>
               </div>
             )}
           </>

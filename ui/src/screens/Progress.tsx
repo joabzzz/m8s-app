@@ -66,7 +66,7 @@ export default function Progress({ onCancel, onErrorReset, passive }: ProgressPr
   ]
 
   const heading = passive
-    ? 'Starting your private mesh…'
+    ? 'Connecting your mesh…'
     : isRuntime
       ? 'Preparing your Mac’s AI engine…'
       : isDownloading
@@ -158,7 +158,11 @@ export default function Progress({ onCancel, onErrorReset, passive }: ProgressPr
       </div>
 
       <p className="max-w-md text-center text-[14px] text-ink-faint transition-opacity duration-700">
-        {SOVEREIGNTY_LINES[lineIdx]}
+        {passive
+          ? lineIdx > 0
+            ? 'Still connecting. Previous peers may be offline. You can return Home and try again later.'
+            : 'You can add an inference host after your mesh connects.'
+          : SOVEREIGNTY_LINES[lineIdx]}
       </p>
 
       <button

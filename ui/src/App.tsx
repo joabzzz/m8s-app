@@ -519,13 +519,9 @@ export default function App() {
           />
         )
       }
-      return (
-        <Progress
-          passive={loadLastConfig()?.kind === 'host' && !loadLastConfig()?.model}
-          onCancel={cancel}
-          onErrorReset={errorReset}
-        />
-      )
+      const config = loadLastConfig()
+      const passive = config?.kind === 'host' ? !config.model : config ? !config.share : false
+      return <Progress passive={passive} onCancel={cancel} onErrorReset={errorReset} />
     }
 
     case 'main':
