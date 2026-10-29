@@ -68,3 +68,9 @@ ESLint and formatting passed. The full mocked suite passed 35 tests; the six
 fleet/rental tests were rerun after serializing status polling. Screenshots under
 `docs/evidence/compute/rental-*-synthetic.png` use mocked backend data. No new
 live rental or native-window recording has been claimed for this fork.
+
+Native smoke check: launched the actual debug desktop with rental configuration
+unset and isolated Goose storage. Inspected the m8s window through cmux: Fleet
+renders, absent node identity is shown as unavailable, metrics are unknown and
+owner attachment is required. This checks the native WebView/backend path, not
+live rental provisioning or inference.
