@@ -18,6 +18,14 @@ struct UiAssets;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/app/providers", get(crate::providers::status))
+        .route("/app/providers/open", post(crate::providers::open_page))
+        .route("/app/providers/vast", post(crate::providers::connect))
+        .route("/app/providers/vast/verify", post(crate::providers::verify))
+        .route(
+            "/app/providers/vast/disconnect",
+            post(crate::providers::disconnect),
+        )
         .route("/app/rentals", get(crate::rentals::status))
         .route("/app/rentals/quote", post(crate::rentals::quote))
         .route("/app/rentals/launch", post(crate::rentals::launch))

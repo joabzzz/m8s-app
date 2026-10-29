@@ -22,7 +22,7 @@ use tokio::sync::Mutex;
 #[derive(Default)]
 pub struct Rentals {
     quote: Mutex<Option<Quote>>,
-    action: Mutex<()>,
+    pub(crate) action: Mutex<()>,
 }
 struct Quote {
     id: String,
@@ -47,7 +47,7 @@ pub struct LaunchRequest {
 fn now() -> i64 {
     chrono::Utc::now().timestamp()
 }
-fn authorize(state: &AppState, headers: &HeaderMap) -> Result<(), StatusCode> {
+pub(crate) fn authorize(state: &AppState, headers: &HeaderMap) -> Result<(), StatusCode> {
     if headers.get("x-m8s-desktop").and_then(|v| v.to_str().ok()) != Some("1")
         || headers.get("origin").is_some_and(|v| {
             v.to_str().ok() != Some(format!("http://127.0.0.1:{}", state.ports.app).as_str())
@@ -57,7 +57,7 @@ fn authorize(state: &AppState, headers: &HeaderMap) -> Result<(), StatusCode> {
     }
     Ok(())
 }
-fn private_bytes(path: &Path) -> anyhow::Result<Vec<u8>> {
+pub(crate) fn private_bytes(path: &Path) -> anyhow::Result<Vec<u8>> {
     use std::io::Read;
     use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
     anyhow::ensure!(
@@ -82,10 +82,10 @@ fn private_bytes(path: &Path) -> anyhow::Result<Vec<u8>> {
     anyhow::ensure!(bytes.len() <= 32768, "Oversized file");
     Ok(bytes)
 }
-fn private_read(path: &Path) -> anyhow::Result<Value> {
+pub(crate) fn private_read(path: &Path) -> anyhow::Result<Value> {
     Ok(serde_json::from_slice(&private_bytes(path)?)?)
 }
-fn write_new(path: &Path, value: &Value) -> anyhow::Result<()> {
+pub(crate) fn write_new(path: &Path, value: &Value) -> anyhow::Result<()> {
     use std::os::unix::fs::OpenOptionsExt;
     let mut file = std::fs::OpenOptions::new()
         .write(true)
@@ -104,9 +104,8 @@ fn write_new(path: &Path, value: &Value) -> anyhow::Result<()> {
 }
 fn config() -> anyhow::Result<(PathBuf, Value)> {
     use std::os::unix::fs::MetadataExt;
-    let cli = PathBuf::from(
-        std::env::var_os("M8S_CLI").ok_or_else(|| anyhow::anyhow!("Controller not configured"))?,
-    );
+    let cli = crate::providers::controller()
+        .ok_or_else(|| anyhow::anyhow!("Controller not configured"))?;
     let meta = std::fs::symlink_metadata(&cli)?;
     anyhow::ensure!(
         cli.is_absolute()
@@ -117,11 +116,12 @@ fn config() -> anyhow::Result<(PathBuf, Value)> {
             && meta.mode() & 0o111 != 0,
         "Invalid controller"
     );
-    let path = PathBuf::from(
-        std::env::var_os("M8S_RENTAL_PLAN")
-            .ok_or_else(|| anyhow::anyhow!("Rental plan not configured"))?,
-    );
-    let plan = private_read(&path)?;
+    let mut plan = if let Some(path) = std::env::var_os("M8S_RENTAL_PLAN") {
+        private_read(Path::new(&path))?
+    } else {
+        crate::providers::generated_plan()?
+    };
+    plan["credential_file"] = json!(crate::providers::credential()?);
     anyhow::ensure!(
         plan["schema"] == "m8s.vast-demo/v1" && plan["model"] == "qwen3.8-27b",
         "Unsupported rental plan"
@@ -273,6 +273,9 @@ pub async fn quote(
     if prices["offer_id"] != req.offer_id {
         return Err(fail("Selected offer changed."));
     }
+    // vast-quote has just authenticated the account and verified complete empty
+    // instance/volume inventories. Retain all prior monetary baseline amounts.
+    plan["policy"]["baseline"]["external_liability"] = json!("NoneConfirmed");
     let estimate=quote_estimate(&plan,&prices,now()).map_err(|_|fail("The configured budget does not cover runtime, cleanup, transfer and contingency. Reconcile the rental plan before booking."))?;
     plan["offer_id"] = json!(req.offer_id);
     plan["offer_machine_id"] = json!(req.machine_id);
@@ -460,6 +463,36 @@ pub async fn request_cleanup(state: &AppState) -> anyhow::Result<()> {
         }
     }
     Ok(())
+}
+
+impl Rentals {
+    pub(crate) async fn invalidate_quote(&self) {
+        self.quote.lock().await.take();
+    }
+}
+pub(crate) fn provider_changes_allowed() -> bool {
+    let plan = if let Some(path) = std::env::var_os("M8S_RENTAL_PLAN") {
+        private_read(Path::new(&path))
+    } else {
+        crate::providers::generated_plan()
+    };
+    let Ok(plan) = plan else {
+        return std::env::var_os("M8S_RENTAL_PLAN").is_none()
+            && crate::providers::setup_without_plan_allowed();
+    };
+    let Ok(control) = directory(&plan) else {
+        return false;
+    };
+    if !control.join("desktop-intent.json").exists() {
+        return true;
+    }
+    let Some(attempt) = plan["directory"].as_str().map(PathBuf::from) else {
+        return false;
+    };
+    private_read(&attempt.join("cleanup-evidence.json"))
+        .ok()
+        .zip(private_read(&attempt.join("desktop-node.json")).ok())
+        .is_some_and(|(receipt, node)| confirmed_removed(&receipt, &node, &plan))
 }
 
 #[cfg(test)]

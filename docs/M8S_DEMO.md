@@ -124,3 +124,25 @@ Leaving the mesh requests removal; independent provider cleanup still enforces t
 bounded deadline if the app exits. Keep the private controller state for recovery.
 The UI currently allows one attempt per reconciled plan, not automatic repeat
 booking. See ADR 002 for the architecture and qualification gaps.
+
+## Connect a provider in the app
+
+Open Compute → Providers → Connect Vast (or Settings → Manage compute providers).
+Choose Get a Vast API key, create a key with account and instance-management access,
+paste it into the password field, and select Verify & connect. This verifies the
+account without creating a rental. You can verify, replace or disconnect the key
+later; replacement/disconnect waits for any managed rental's confirmed cleanup.
+The key stays in private local app storage and is not shown again.
+
+New setups with the m8s controller installed receive a bounded one-attempt profile
+automatically. Existing `M8S_RENTAL_PLAN` profiles retain their account and accounting;
+the setup key must belong to that account. Browsing is separate from billing:
+a fresh quote and explicit budget confirmation are still required to rent.
+Consumed plans remain consumed after key replacement or disconnect. Nebius is a
+coming-soon card, not a working adapter.
+
+Owned rentals offer Open Vast console, Copy instance ID and Connection details,
+in addition to node inspection and removal. The current managed runtime has no
+interactive SSH or pause/resume. Its provisioning key cannot open a shell. Use
+Remove compute to release the rental and wait for provider-confirmed removal.
+See [ADR 003](decisions/003-provider-onboarding.md) for custody and lifecycle details.
