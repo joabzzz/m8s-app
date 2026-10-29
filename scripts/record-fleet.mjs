@@ -3,9 +3,12 @@
 import { chromium } from '../ui/node_modules/playwright/index.mjs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-const [flag, output] = process.argv.slice(2)
-if (flag !== '--live' || !output || !path.isAbsolute(output)) throw Error('Usage: record-fleet.mjs --live /absolute/new-private-output')
-const base = 'http://127.0.0.1:4640'
+const args = process.argv.slice(2)
+const [flag, output, urlFlag, selectedUrl] = args
+if (flag !== '--live' || !output || !path.isAbsolute(output) || ![2, 4].includes(args.length) || (args.length === 4 && urlFlag !== '--url')) throw Error('Usage: record-fleet.mjs --live /absolute/new-private-output [--url http://127.0.0.1:PORT]')
+const url = new URL(selectedUrl ?? 'http://127.0.0.1:4640')
+if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw Error('Only the explicit local desktop backend is supported')
+const base = url.origin
 const read = async route => {
   const r = await fetch(base + route, { signal: AbortSignal.timeout(30000) })
   if (!r.ok) throw Error(`Read failed: ${route}`)
@@ -51,7 +54,7 @@ try {
     const r = await response
     if (r.ok()) {
       const q = await r.json()
-      if (!(q.cap_micro_usd>0 && q.cap_micro_usd<=6000000)) throw Error('Allowance exceeds capture boundary')
+      if (!(Number.isSafeInteger(q.cap_micro_usd) && q.cap_micro_usd>0 && q.cap_micro_usd<=6000000)) throw Error('Allowance exceeds capture boundary')
       chosen=candidate.offer
       await save('offer.json', { ...chosen, cap_micro_usd:q.cap_micro_usd, estimated_reserve_micro_usd:q.estimated_reserve_micro_usd })
       break

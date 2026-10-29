@@ -152,9 +152,12 @@ See [ADR 003](decisions/003-provider-onboarding.md) for custody and lifecycle de
 The compact Fleet UI uses a separate live recorder:
 
 ```sh
-node scripts/record-fleet.mjs --live /absolute/new-private-output
+node scripts/record-fleet.mjs --live /absolute/new-private-output --url http://127.0.0.1:4640
 node scripts/edit-fleet.mjs /absolute/new-private-output
 ```
+
+Use `--url` to select an isolated backend on another local port without replacing
+a running desktop session. It accepts only a plain HTTP loopback origin.
 
 The app must already have a passive private mesh (owner-verified for certified
 mode), no remote peers, and
