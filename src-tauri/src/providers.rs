@@ -185,6 +185,11 @@ pub async fn connect(
         ));
     }
     let _guard = state.rentals.action.lock().await;
+    if crate::plugin_compute::configured() {
+        return Err(fail(
+            "Provider changes for token-only v0 use the explicitly selected plugin plan. Finish cleanup before changing its credentials.",
+        ));
+    }
     if !rentals::provider_changes_allowed() {
         return Err(fail(
             "Remove the managed rental and wait for confirmed cleanup before changing its provider key.",
@@ -255,6 +260,11 @@ pub async fn verify(State(state): State<Arc<AppState>>, headers: HeaderMap) -> R
 pub async fn disconnect(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Reply {
     rentals::authorize(&state, &headers).map_err(|_| fail("Request refused"))?;
     let _guard = state.rentals.action.lock().await;
+    if crate::plugin_compute::configured() {
+        return Err(fail(
+            "Provider changes for token-only v0 use the explicitly selected plugin plan. Finish cleanup before changing its credentials.",
+        ));
+    }
     if !rentals::provider_changes_allowed() {
         return Err(fail(
             "Wait for confirmed rental cleanup before disconnecting Vast.",

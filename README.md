@@ -1,6 +1,14 @@
 # m8s-app — experimental compute console
 
+![m8s token-only v0 architecture preview; live qualification pending](docs/assets/v0-cover.svg)
+
 Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
+
+**Stock-Mesh v0 is not yet live-qualified.** The opt-in `M8S_PLUGIN` adapter uses
+the same `m8s.operator/v0` operations as the Mesh plugin. Token-only admission
+is weaker than owner certification and is labeled separately. The historical
+Qwen recording used a private runtime fork; it does not prove this new flow.
+The latest attempted capture did not complete inference and was not published.
 Home is the landing page, with active local meshes and recent connections.
 Chat and Compute appear as top tabs only while attached to a mesh. A private mesh
 can start as a passive client without downloading a model; local model sharing is

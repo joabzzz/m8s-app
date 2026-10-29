@@ -33,6 +33,7 @@ export default function RentalInventory({
         })
         if (!response.ok) throw new Error()
         const value = await response.json()
+        if (value.error) throw new Error()
         if (!controller.signal.aborted) {
           setRental(value.rental)
           onOwnedNode(value.rental?.node_id ?? null)
@@ -89,21 +90,25 @@ export default function RentalInventory({
             {rental.instance_id ? `instance ${rental.instance_id}` : `offer ${rental.offer_id}`} ·{' '}
             {rental.stage === 'removed'
               ? 'Removal confirmed'
-              : rental.stage === 'removal_requested'
-                ? 'Removal requested — awaiting confirmation'
-                : rental.stage === 'cleanup_unconfirmed'
-                  ? 'Attempt ended — cleanup confirmation pending'
-                  : rental.stage === 'mesh_canary_completed'
-                    ? 'Mesh inference verified'
-                    : rental.stage === 'verifying_inference'
-                      ? 'Checking mesh inference'
-                      : rental.stage === 'model_download_error'
-                        ? 'Host reported a model download error'
-                        : rental.stage === 'preparing_model'
-                          ? 'Host authenticated · preparing model'
-                          : rental.stage === 'provisioning_host'
-                            ? 'Configuring host'
-                            : 'Provisioning or running'}
+              : rental.stage === 'token_inference_verified'
+                ? 'Token-only mesh inference verified · not owner-certified'
+                : rental.stage === 'token_provisioning'
+                  ? 'Stock Mesh provisioning · token-only admission'
+                  : rental.stage === 'removal_requested'
+                    ? 'Removal requested — awaiting confirmation'
+                    : rental.stage === 'cleanup_unconfirmed'
+                      ? 'Attempt ended — cleanup confirmation pending'
+                      : rental.stage === 'mesh_canary_completed'
+                        ? 'Mesh inference verified'
+                        : rental.stage === 'verifying_inference'
+                          ? 'Checking mesh inference'
+                          : rental.stage === 'model_download_error'
+                            ? 'Host reported a model download error'
+                            : rental.stage === 'preparing_model'
+                              ? 'Host authenticated · preparing model'
+                              : rental.stage === 'provisioning_host'
+                                ? 'Configuring host'
+                                : 'Provisioning or running'}
           </p>
           <p className="mt-2 text-xs text-ink-muted">
             Mesh {rental.target.mesh_id} · bounded deadline{' '}

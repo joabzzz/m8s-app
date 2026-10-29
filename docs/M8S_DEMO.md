@@ -146,3 +146,57 @@ in addition to node inspection and removal. The current managed runtime has no
 interactive SSH or pause/resume. Its provisioning key cannot open a shell. Use
 Remove compute to release the rental and wait for provider-confirmed removal.
 See [ADR 003](decisions/003-provider-onboarding.md) for custody and lifecycle details.
+
+## Current-mesh showcase recording
+
+The compact Fleet UI uses a separate live recorder:
+
+```sh
+node scripts/record-fleet.mjs --live /absolute/new-private-output
+node scripts/edit-fleet.mjs /absolute/new-private-output
+```
+
+The app must already have a passive private mesh (owner-verified for certified
+mode), no remote peers, and
+an unused, explicitly reconciled rental plan. The recorder browses actual offers,
+checks a fresh quote (at most USD6), confirms once, waits for the controller's
+real inference canary, inspects hardware, asks two questions in Chat, and requests
+removal. It never installs mock responses. Independent controller cleanup remains
+armed if capture fails. `M8S_RECORD_SKIP_OFFERS` can exclude comma-separated stale
+offer IDs from selection; it never bypasses fresh qualification.
+
+The editor refuses unsuccessful captures. It produces a 67-second MP4 and a
+30-second GIF, shortening waits and retaining readable answers, with explicit
+editorial title cards and a live-recording disclosure. Keep the uncut WebM and
+private attempt/accounting evidence locally; publish only reviewed media and
+sanitized receipts. A failed run must not replace the existing successful demo.
+
+Recording exposed a remaining status issue: a controller failure during final
+preflight, before budget reservation or CREATE, currently appears as cleanup
+pending. Preserve its immutable attempt, verify the failure boundary and fresh
+empty provider inventories, then select a separately reconciled plan. Do not
+reset the old intent or fabricate a provider-removal receipt for a nonexistent
+instance. A dedicated pre-CREATE failure projection remains follow-up work.
+
+## Stock-Mesh v0 adapter (qualification pending)
+
+Set `M8S_PLUGIN` to the absolute, owned `m8s-plugin` executable and inherit
+`M8S_CLI` plus `M8S_V0_PLAN` when launching the app. The plan and target files
+must be private and explicitly select `token-only-provider-trusted` admission.
+See the plugin repository's `docs/V0_TOKEN_JOIN.md` for the plan and worker
+requirements. The selected node/mesh must match the app's current attachment.
+
+Offers, quotes, launch, status and removal then use the same `m8s.operator/v0`
+implementation as Mesh's plugin tool. Provider credentials come from the selected
+private plan; the Providers tab cannot replace them in this mode. A failed plugin
+operation does not fall back to the historical launcher.
+
+Token-only admission does not verify an owner-issued worker certificate. The
+provider can inspect the worker's join token and inference data. The current app
+still embeds upstream `b4b33ef8`; this adapter alone does not prove compatibility
+with the latest main runtime. The README architecture cover is a preview, and
+no new live demo has passed the stock-Mesh acceptance gates yet.
+
+The recorder recognizes token-mode readiness separately and records its admission
+mode. The editor labels token-mode footage explicitly; this tooling has syntax
+checks, but no successful stock-v0 capture yet.

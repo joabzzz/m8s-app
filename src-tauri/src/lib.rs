@@ -10,6 +10,7 @@ pub mod diagnose;
 pub mod events;
 pub mod meshes;
 pub mod node;
+pub mod plugin_compute;
 pub mod providers;
 pub mod proxy;
 pub mod rentals;

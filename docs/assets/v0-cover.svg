@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#080808"/>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="70" y="75" fill="#ff6500" font-size="22" font-weight="700">m8s</text>
+<text x="70" y="152" fill="#f3f3f3" font-size="48" font-weight="700">Bring rented compute to your mesh.</text>
+<text x="70" y="199" fill="#a4a4a4" font-size="23">Stock Mesh · provider-managed hardware · bounded cleanup</text>
+<g fill="#111" stroke="#333"><rect x="70" y="274" width="300" height="151" rx="14"/><rect x="450" y="274" width="300" height="151" rx="14"/><rect x="830" y="274" width="300" height="151" rx="14"/></g>
+<g fill="#f3f3f3" font-size="25" font-weight="700"><text x="95" y="321">Your mesh</text><text x="475" y="321">m8s-plugin</text><text x="855" y="321">Rented worker</text></g>
+<g fill="#aaa" font-size="18"><text x="95" y="359">Model-free client</text><text x="95" y="389">Personal app or Mesh tools</text><text x="475" y="359">Review · rent · inspect</text><text x="475" y="389">Durable limits and removal</text><text x="855" y="359">Stock Mesh + GPU</text><text x="855" y="389">Private join file over SSH</text></g>
+<g fill="none" stroke="#ff6500" stroke-width="3"><path d="M385 349h48m-10-8 10 8-10 8"/><path d="M765 349h48m-10-8 10 8-10 8"/></g>
+<text x="70" y="493" fill="#ff9a5a" font-size="21">Token-only v0 · owner-certified admission remains follow-up work</text>
+<path d="M70 535h1060" stroke="#292929"/>
+<text x="70" y="574" fill="#888" font-size="17">Architecture preview. Stock-Mesh end-to-end live qualification is pending.</text>
+</g></svg>
