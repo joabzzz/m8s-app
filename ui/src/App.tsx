@@ -1,3 +1,4 @@
+import ComputeDemo, { type ComputeStatus } from './screens/ComputeDemo'
 import Compute from './screens/Compute'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import SwitchMeshDialog from './components/SwitchMeshDialog'
@@ -18,6 +19,7 @@ import type { Visibility as Vis } from './lib/types'
 
 type AppView =
   | { name: 'compute' }
+  | { name: 'rental-demo' }
   | { name: 'welcome' }
   | { name: 'join'; prefillToken?: string }
   | { name: 'join-setup'; token: string } // power setup for join-and-share
@@ -38,6 +40,38 @@ export default function App() {
       ? { name: 'welcome' }
       : { name: 'compute' },
   )
+  const [rental, setRental] = useState<ComputeStatus | null>(null)
+  useEffect(() => {
+    let stopped = false
+    let first = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const poll = async () => {
+      try {
+        const response = await fetch('/app/compute', { signal: AbortSignal.timeout(5000) })
+        if (!response.ok) throw new Error('Compute status unavailable')
+        const value = await response.json()
+        if (stopped) return
+        if (value?.enabled) {
+          setRental(value as ComputeStatus)
+          if (first && new URLSearchParams(location.search).get('view') === 'rental-demo')
+            setView({ name: 'rental-demo' })
+        } else {
+          setRental((current) => (current ? { ...current, stage: 'uncertain', node: null } : null))
+        }
+        first = false
+      } catch {
+        if (!stopped)
+          setRental((current) => (current ? { ...current, stage: 'uncertain', node: null } : null))
+      } finally {
+        if (!stopped) timer = setTimeout(() => void poll(), 5000)
+      }
+    }
+    void poll()
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+    }
+  }, [])
   const [booted, setBooted] = useState(false)
   // A model queued to share on the global mesh. A chat-only client node has no
   // AI runtime, so upgrading means shutdown + rejoin with share:true — and
@@ -245,9 +279,15 @@ export default function App() {
   )
 
   switch (view.name) {
+    case 'rental-demo':
+      return rental ? (
+        <ComputeDemo initial={rental} onBack={() => setView({ name: 'compute' })} />
+      ) : null
     case 'compute':
       return (
         <Compute
+          rental={rental}
+          onRental={rental ? () => setView({ name: 'rental-demo' }) : undefined}
           onMesh={() => setView({ name: 'welcome' })}
           onChat={() => setView({ name: 'main' })}
         />

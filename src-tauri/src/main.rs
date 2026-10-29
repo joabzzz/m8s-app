@@ -110,7 +110,11 @@ fn main() {
             }
             let window =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::External(url))
-                    .title("Mesh")
+                    .title(if state.compute.is_some() {
+                        "m8s — GPU session"
+                    } else {
+                        "m8s"
+                    })
                     .inner_size(1100.0, 720.0)
                     .min_inner_size(900.0, 620.0)
                     .build()?;
@@ -158,7 +162,11 @@ fn main() {
 /// stray slashes/whitespace are trimmed. Returns None for other paths or
 /// empty tokens.
 fn extract_invite_token(url: &str) -> Option<String> {
-    let rest = url.trim().strip_prefix("mesh://")?.strip_prefix("join")?;
+    let rest = url
+        .trim()
+        .strip_prefix("m8s://")
+        .or_else(|| url.trim().strip_prefix("mesh://"))?
+        .strip_prefix("join")?;
     // Whatever separates "join" from the token — slash, fragment, or query
     // (also tolerating combinations like `join/?token=...` or `join/#...`).
     let raw = rest.trim().trim_matches('/');
@@ -182,10 +190,10 @@ fn extract_invite_token(url: &str) -> Option<String> {
 }
 
 /// Zoom persists in a tiny JSON blob next to the app's other data
-/// (~/Library/Application Support/mesh-console on macOS). Best effort — a
+/// (~/Library/Application Support/m8s-app on macOS). Best effort — a
 /// missing or corrupt file just means 100%.
 fn settings_path() -> Option<std::path::PathBuf> {
-    dirs::data_dir().map(|dir| dir.join("mesh-console").join("ui-settings.json"))
+    dirs::data_dir().map(|dir| dir.join("m8s-app").join("ui-settings.json"))
 }
 
 fn load_zoom() -> f64 {
@@ -256,6 +264,7 @@ mod tests {
     fn accepts_the_documented_shapes() {
         for url in [
             "mesh://join/abc-DEF_123",
+            "m8s://join/abc-DEF_123",
             "mesh://join#abc-DEF_123",
             "mesh://join?token=abc-DEF_123",
             "mesh://join/?token=abc-DEF_123",

@@ -17,8 +17,9 @@ certificate-enforcing runtime used in the m8s demo. See m8s P005 for outstanding
 signing, offer API, metrics, release and teardown acceptance.
 
 Desktop packaging is for local tests and GIF capture; no signed public release
-or updater is planned. Existing mesh:// registration must be reconsidered before
-installing this fork beside Mesh.app to avoid hijacking upstream invite links.
+or updater is planned. The fork registers m8s:// and uses a distinct bundle identifier and m8s-app
+data directory. Existing mesh:// links remain parseable when explicitly supplied;
+the fork does not register itself as their system handler.
 
 ## Local node identity (user clarification)
 
@@ -37,5 +38,33 @@ from the local trust store. Installation succeeded through the public Yarn mirro
 in a temporary directory, retaining lockfile integrity checks and TLS verification.
 The repository registry and lockfile are unchanged. Production build, lint,
 formatting, the 31-test mocked suite and four focused compute tests passed.
-The passive-client layout was visually inspected. Native bundle rebranding and
-data-directory isolation remain pending before installation.
+The passive-client layout was visually inspected. The native title and bundle are now named m8s, with separate local settings
+and default Goose storage. Internal Rust crate names remain unchanged.
+
+## Dedicated rental owner integration
+
+The initial adapter reuses the bounded, certified-owner implementation from the
+earlier desktop demo (4604533). An explicit private M8S_DESKTOP_CONFIG selects
+one m8sd attempt. The fleet displays that attempt's verified owner identity,
+not the unrelated embedded node. Failed polling clears identity and authority.
+Navigation stays with the selected session. A configured session with no live
+owner is shown as disconnected; configuration alone is not authentication.
+
+This path provisions a dedicated passive owner client and a remote inference
+host. It does not yet attach arbitrary existing passive clients or hosts. The
+general design still permits either role to manage compute; integration must
+bind authority to a selected node/mesh before extending this path. Keep that
+gap visible rather than weakening the demo's certificate and role checks.
+
+Readiness requires the owner certificate, exact model and coordinator canary.
+Removal requires the exact-resource absence event and matching provider receipt.
+The existing independent watchdog remains responsible after a UI failure.
+Provider secrets never enter the WebView. This adapter is deliberately a single
+attempt; a provider offer browser and multi-rental fleet are still outstanding.
+
+Validation for the managed-session slice: 24 native Rust tests passed after
+bundle/settings isolation; strict all-target Clippy passed. UI production build,
+ESLint and formatting passed. The full mocked suite passed 35 tests; the six
+fleet/rental tests were rerun after serializing status polling. Screenshots under
+`docs/evidence/compute/rental-*-synthetic.png` use mocked backend data. No new
+live rental or native-window recording has been claimed for this fork.

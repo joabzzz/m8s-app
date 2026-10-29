@@ -3,10 +3,16 @@
 Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
 Fleet overview is the default landing page; `?view=mesh` opens the original
 mesh setup/chat entry point. The Mesh logo returns to the compute workspace.
-The first UI slice observes peers and node role; authenticated rental attachment
-and provider actions are still under development. See [the decision record](docs/decisions/001-compute-console.md).
+Fleet observes peers and node role. An opt-in [managed rental session](docs/M8S_DEMO.md)
+connects to one m8sd attempt, verifies its dedicated local owner, and exposes
+Add compute, pinned inference and confirmed removal. Attaching to an arbitrary
+existing mesh, offer browsing and multiple rentals remain under development.
+See [the decision record](docs/decisions/001-compute-console.md).
 
-Desktop builds are for local testing and demo capture.
+Desktop builds are for local testing and demo capture. The native bundle is
+`m8s.app`, with a separate bundle identifier, `m8s://` link registration and
+`m8s-app` settings/Goose directory. Rust crate and executable names retain their
+upstream names for now. Shared Mesh model caches remain shared.
 
 ## Upstream desktop experience
 
@@ -86,7 +92,7 @@ just test           # Rust unit tests
 just test-e2e       # mocked Playwright suite (fast)
 just test-e2e-real  # real end-to-end: real node, real model, real agent + tool use
 just check          # the full pre-PR gate (fmt-check + lint + test + test-e2e)
-just bundle         # package Mesh.app (ad-hoc signed)
+just bundle         # package m8s.app (ad-hoc signed)
 ```
 
 First real run downloads the tiny test model (Qwen3-0.6B, ~400MB) and the

@@ -3,6 +3,7 @@
 #![recursion_limit = "256"]
 
 pub mod agent;
+pub mod compute;
 pub mod diagnose;
 pub mod events;
 pub mod node;
@@ -28,7 +29,7 @@ pub fn init_process_defaults() {
     if std::env::var_os("GOOSE_PATH_ROOT").is_none() {
         let root = dirs::data_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("mesh-console/goose");
+            .join("m8s-app/goose");
         // Safety: called from main before any other threads exist.
         unsafe { std::env::set_var("GOOSE_PATH_ROOT", root) };
     }

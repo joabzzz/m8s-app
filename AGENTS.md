@@ -1,4 +1,4 @@
-# Agent notes — mesh-console
+# Agent notes — m8s-app
 
 Read `DESIGN.md` first: architecture, verified library facts, gotchas, roadmap.
 `README.md` is the human intro; `DEMO.md` is a walkthrough script.
@@ -22,13 +22,21 @@ just check      # fmt + lint + rust tests + playwright e2e (mocked)
 ## Do not break
 - **rmcp / rmcp-macros must stay 1.7.0 in Cargo.lock** (goose pin won't compile
   against 1.8). Beware `cargo update`.
-- **`../hf-hub` local clone is required** (workspace `[patch.crates-io]`).
-  DESIGN.md §3 has recreation steps if missing.
+- **hf-hub uses a pinned Git patch** (workspace `[patch.crates-io]`).
+  No sibling checkout is required; see DESIGN.md §3.
 - **npm registry is public npmjs** (`ui/.npmrc`) — never reintroduce
   `global.block-artifacts.com` URLs into `ui/package-lock.json`.
 - goose builtins: keep `register_builtin_extensions(...)` in `agent.rs`.
 
-## Releasing (macOS)
+## Experimental fork
+
+This fork is for local tests and recordings, not a desktop release. The bundle
+is m8s.app with identifier dev.joabzzz.m8s-app; settings and Goose data default
+to m8s-app. It registers m8s://, leaving Mesh.app’s mesh:// registration alone.
+Internal crate names remain mesh-console. See docs/M8S_DEMO.md for the opt-in
+managed session and docs/decisions/001-compute-console.md for outstanding work.
+
+## Upstream release workflow (macOS; not this fork’s scope)
 - `just release` → signed **+ notarized** `Mesh.app` + `.dmg` in
   `target/release/bundle/`. Opens cleanly on other Macs (no Gatekeeper
   "unidentified developer" warning). `just release-signed-only` skips the

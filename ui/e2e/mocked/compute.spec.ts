@@ -36,3 +36,38 @@ for (const serving of [false, true]) {
     await page.screenshot({ path: testInfo.outputPath('fleet.png'), fullPage: true })
   })
 }
+
+test('managed fleet uses its owner and drops stale authority when polling fails', async ({
+  page,
+}) => {
+  await installMockBackend(page, { startRunning: true })
+  await page.addInitScript(() => {
+    const original = window.fetch
+    let failed = false
+    Object.assign(window, {
+      failCompute: () => {
+        failed = true
+      },
+    })
+    window.fetch = async (input, init) => {
+      if (String(input) === '/app/compute') {
+        if (failed) return new Response('', { status: 503 })
+        return Response.json({
+          enabled: true,
+          stage: 'ready',
+          cap_micro_usd: 1_200_000,
+          node: { node_id: 'dedicated-owner-node', peers: [] },
+          expires_at: null,
+        })
+      }
+      return original(input, init)
+    }
+  })
+  await page.goto('/')
+  await expect(page.getByText('dedicated-owner-node', { exact: true })).toBeVisible()
+  await expect(page.getByText('Owner verified · dedicated mesh')).toBeVisible()
+  await page.evaluate(() => (window as unknown as { failCompute: () => void }).failCompute())
+  await expect(page.getByText('Owner attachment required')).toBeVisible({ timeout: 12000 })
+  await expect(page.getByText('dedicated-owner-node', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Managed client disconnected')).toBeVisible()
+})

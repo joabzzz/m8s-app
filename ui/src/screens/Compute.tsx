@@ -1,3 +1,4 @@
+import type { ComputeStatus } from './ComputeDemo'
 import { useState } from 'react'
 import { Activity, ArrowUpRight, Cloud, Cpu, Network, Server } from 'lucide-react'
 import { useApp } from '../lib/store'
@@ -5,19 +6,33 @@ import { Button } from '../components/ui'
 
 type Section = 'Fleet' | 'Providers' | 'Inference'
 
-export default function Compute({ onMesh, onChat }: { onMesh: () => void; onChat: () => void }) {
+export default function Compute({
+  onMesh,
+  onChat,
+  onRental,
+  rental,
+}: {
+  onMesh: () => void
+  onChat: () => void
+  onRental?: () => void
+  rental?: ComputeStatus | null
+}) {
   const [section, setSection] = useState<Section>('Fleet')
   const { phase, status } = useApp()
-  const connected = phase.phase === 'running' && status !== null
-  const peers = status?.peers ?? []
-  const role =
-    phase.phase === 'running'
+  const observed = rental ? rental.node : status
+  const connected = rental ? rental.node !== null : phase.phase === 'running' && status !== null
+  const peers = observed?.peers ?? []
+  const role = rental
+    ? connected
+      ? 'Managed passive client'
+      : 'Managed client disconnected'
+    : phase.phase === 'running'
       ? phase.serving
         ? 'Inference host'
         : 'Passive client'
       : 'No active node'
   const models = [...new Set(peers.flatMap((p) => p.serving_models ?? p.models ?? []))]
-  const speed = status?.tok_per_sec
+  const speed = rental ? undefined : status?.tok_per_sec
   return (
     <div className="flex h-screen bg-bg text-ink" data-testid="compute-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-panel p-5">
@@ -45,7 +60,7 @@ export default function Compute({ onMesh, onChat }: { onMesh: () => void; onChat
           )
         })}
         <button
-          onClick={onMesh}
+          onClick={onRental ?? onMesh}
           className="mt-auto flex items-center gap-3 rounded-(--radius-control) border border-edge p-3 text-left text-sm"
         >
           <Network size={16} />
@@ -58,6 +73,15 @@ export default function Compute({ onMesh, onChat }: { onMesh: () => void; onChat
         </button>
       </aside>
       <main className="min-w-0 flex-1 overflow-auto p-8">
+        {onRental && (
+          <section className="mb-6 flex items-center justify-between rounded-(--radius-card) border border-accent/50 bg-panel p-5">
+            <div>
+              <p className="font-semibold">Managed rental session</p>
+              <p className="mt-1 text-sm text-ink-muted">Dedicated mesh · one bounded GPU lease</p>
+            </div>
+            <Button onClick={onRental}>Open rental session</Button>
+          </section>
+        )}
         <header className="mb-9 flex items-center justify-between">
           <div>
             <p className="mb-2 text-xs text-ink-faint">Your infrastructure, together.</p>
@@ -65,7 +89,7 @@ export default function Compute({ onMesh, onChat }: { onMesh: () => void; onChat
               {section === 'Fleet' ? 'Compute overview' : section}
             </h1>
           </div>
-          <Button variant="quiet" onClick={onMesh}>
+          <Button variant="quiet" onClick={onRental ?? onMesh}>
             {connected ? 'Manage mesh' : 'Connect mesh'}{' '}
             <ArrowUpRight size={14} className="ml-2 inline" />
           </Button>
@@ -78,12 +102,14 @@ export default function Compute({ onMesh, onChat }: { onMesh: () => void; onChat
           <div>
             <p className="text-sm font-semibold">{role}</p>
             <p className="mt-1 max-w-md truncate font-mono text-xs text-ink-faint">
-              {status?.node_id ?? 'Node identity unavailable'}
+              {observed?.node_id ?? 'Node identity unavailable'}
             </p>
           </div>
           <div className="ml-auto text-right">
             <p className="text-xs text-ink-muted">Rental authorization</p>
-            <p className="mt-1 text-xs text-warn">Owner attachment required</p>
+            <p className="mt-1 text-xs text-warn">
+              {rental?.node ? 'Owner verified · dedicated mesh' : 'Owner attachment required'}
+            </p>
           </div>
         </section>
         <div className="mb-9 grid grid-cols-3 gap-4">
@@ -188,7 +214,7 @@ export default function Compute({ onMesh, onChat }: { onMesh: () => void; onChat
               Use the existing agent chat to exercise available inference. GPU utilization and
               per-rental performance require remote telemetry.
             </p>
-            <Button onClick={onChat} disabled={!connected}>
+            <Button onClick={onRental ?? onChat} disabled={!connected}>
               Open inference chat
             </Button>
           </section>
