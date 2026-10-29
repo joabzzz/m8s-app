@@ -10,6 +10,7 @@ pub mod diagnose;
 pub mod events;
 pub mod meshes;
 pub mod node;
+pub mod providers;
 pub mod proxy;
 pub mod rentals;
 pub mod server;

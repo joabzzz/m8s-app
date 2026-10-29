@@ -19,10 +19,16 @@ pub async fn offers(State(state): State<Arc<AppState>>) -> Response {
             .into_response();
     }
     let (Some(cli), Some(credential)) = (
-        std::env::var_os("M8S_CLI"),
-        std::env::var_os("M8S_VAST_CREDENTIAL_FILE"),
+        crate::providers::controller().map(|p| p.into_os_string()),
+        crate::providers::credential()
+            .ok()
+            .map(|p| p.into_os_string()),
     ) else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({"error":"Vast is not configured. Start m8s with M8S_CLI and M8S_VAST_CREDENTIAL_FILE pointing to your controller and credential file."}))).into_response();
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error":"Connect Vast in Compute → Providers before browsing hardware."})),
+        )
+            .into_response();
     };
     let cli = PathBuf::from(cli);
     let credential = PathBuf::from(credential);

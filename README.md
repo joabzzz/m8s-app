@@ -6,6 +6,10 @@ Chat and Compute appear as top tabs only while attached to a mesh. A private mes
 can start as a passive client without downloading a model; local model sharing is
 an explicit alternative. Recent private meshes retain their invite for reconnecting.
 
+Connect Vast from Compute → Providers or Settings → Manage compute providers.
+Paste an API key, verify the account, and browse hardware. Keys stay in private
+local files; no rental is created during setup. Nebius is coming soon.
+
 The Compute tab shows discovered hardware, VRAM capacity, running models and node
 details. Add compute browses Vast offers with per-GPU model-size estimates,
 rechecks availability and budget, and attaches a bounded rental to the selected

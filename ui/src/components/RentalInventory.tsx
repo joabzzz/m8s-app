@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from './ui'
+import { openProviderPage } from './Providers'
 interface Rental {
   node_id?: string
   instance_id?: number
@@ -21,6 +22,8 @@ export default function RentalInventory({
   const [error, setError] = useState('')
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [details, setDetails] = useState(false)
+  const [copied, setCopied] = useState(false)
   useEffect(() => {
     const controller = new AbortController()
     const poll = async () => {
@@ -110,6 +113,48 @@ export default function RentalInventory({
             Once discovered, select the node in Mesh hardware to inspect its models and advertised
             capacity.
           </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button
+              variant="quiet"
+              onClick={() =>
+                void openProviderPage('vast_console').catch(() =>
+                  setError('Could not open the Vast console. Try again.'),
+                )
+              }
+            >
+              Open Vast console
+            </Button>
+            {rental.instance_id && (
+              <Button
+                variant="quiet"
+                onClick={() =>
+                  void navigator.clipboard
+                    .writeText(String(rental.instance_id))
+                    .then(() => setCopied(true))
+                    .catch(() => setError('Could not copy the instance ID.'))
+                }
+              >
+                {copied ? 'Instance ID copied' : 'Copy instance ID'}
+              </Button>
+            )}
+            <Button variant="quiet" onClick={() => setDetails(!details)}>
+              {details ? 'Hide connection details' : 'Connection details'}
+            </Button>
+          </div>
+          {details && (
+            <div className="mt-4 rounded-(--radius-control) border border-edge bg-inset p-4 text-sm">
+              <h3 className="font-semibold">Managed rental access</h3>
+              <p className="mt-2 text-ink-muted">
+                Use the Vast console for container logs and network details. This runtime’s SSH
+                login only accepts provisioning commands, so it cannot open an interactive terminal.
+              </p>
+              <p className="mt-2 text-ink-muted">
+                Pause/resume is unavailable for this short-lived rental. Stopping the container
+                breaks its mesh session and triggers cleanup. Use Remove compute to release it;
+                stopped instances can still incur storage charges.
+              </p>
+            </div>
+          )}
           {rental.node_id && nodeIds.includes(rental.node_id) && (
             <Button
               variant="quiet"

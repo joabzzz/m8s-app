@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import MeshMark from '../components/MeshMark'
+import Providers from '../components/Providers'
 import { listChatSessions, setChatArchived, type ChatSessionSummary } from '../lib/chat-sessions'
 import { Button } from '../components/ui'
 import { useApp } from '../lib/store'
@@ -31,6 +32,7 @@ const THEME_OPTIONS: Array<{ id: ThemePref; label: string; Icon: typeof Sun; hin
 
 export default function SettingsView({ onClose, onLeave }: SettingsViewProps) {
   const { phase, status } = useApp()
+  const [providers, setProviders] = useState(false)
   const [archivedChats, setArchivedChats] = useState<ChatSessionSummary[]>([])
   const [restoreError, setRestoreError] = useState<string | null>(null)
 
@@ -74,7 +76,7 @@ export default function SettingsView({ onClose, onLeave }: SettingsViewProps) {
       aria-modal="true"
       aria-labelledby="settings-title"
     >
-      <div className="w-full max-w-2xl animate-message-in rounded-(--radius-card) border border-edge bg-panel p-6 shadow-2xl">
+      <div className="max-h-[90vh] overflow-y-auto w-full max-w-2xl animate-message-in rounded-(--radius-card) border border-edge bg-panel p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-(--radius-control) border border-accent/40 bg-accent/[0.08] text-accent">
@@ -97,6 +99,16 @@ export default function SettingsView({ onClose, onLeave }: SettingsViewProps) {
           </button>
         </div>
 
+        <div className="mt-5">
+          <Button variant="quiet" onClick={() => setProviders(!providers)}>
+            {providers ? 'Hide provider setup' : 'Manage compute providers'}
+          </Button>
+        </div>
+        {providers && (
+          <div className="mt-4">
+            <Providers />
+          </div>
+        )}
         <div className="mt-6 grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-(--radius-card) border border-edge bg-inset p-4">
             <div className="text-[11px] font-semibold tracking-wider text-ink-faint uppercase">

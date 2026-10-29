@@ -1,0 +1,1 @@
+Vast.ai logo: unmodified official light-on-dark SVG from https://vast.ai/vast_logo.svg, linked by https://vast.ai/press-kit (2026-10-29). Display on a dark background without recoloring or distortion. The mark belongs to Vast.ai.

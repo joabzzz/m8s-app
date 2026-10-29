@@ -7,6 +7,7 @@ import { fleetNodes, fleetTotal, gb } from '../lib/fleet'
 import NodeDetails from '../components/NodeDetails'
 import ComputeOffers from '../components/ComputeOffers'
 import RentalInventory from '../components/RentalInventory'
+import Providers from '../components/Providers'
 
 export default function Compute({
   onChat,
@@ -20,6 +21,8 @@ export default function Compute({
 }) {
   const { phase, status } = useApp()
   const [ownedNode, setOwnedNode] = useState<string | null>(null)
+  const [providerConnected, setProviderConnected] = useState<boolean | null>(null)
+  const [setupProvider, setSetupProvider] = useState(false)
   const [adding, setAdding] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const close = useCallback(() => setSelected(null), [])
@@ -52,11 +55,25 @@ export default function Compute({
                 <p className="mb-2 text-xs text-ink-faint">{name}</p>
                 <h1 className="font-display text-3xl font-bold">Compute overview</h1>
               </div>
-              <Button onClick={() => setAdding(true)}>
+              <Button
+                onClick={() => {
+                  if (providerConnected === false) {
+                    setSetupProvider(true)
+                    document
+                      .getElementById('compute-providers')
+                      ?.scrollIntoView({ behavior: 'smooth' })
+                  } else setAdding(true)
+                }}
+              >
                 <Plus size={16} className="mr-2 inline" />
                 Add compute
               </Button>
             </header>
+            <Providers
+              forceOpen={setupProvider}
+              onConfigured={setProviderConnected}
+              onDismiss={() => setSetupProvider(false)}
+            />
             <section
               aria-label="Local node identity"
               className="mb-6 flex items-center gap-4 rounded-(--radius-card) border border-edge bg-panel p-5"
