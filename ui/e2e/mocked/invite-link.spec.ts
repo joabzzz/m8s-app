@@ -10,7 +10,7 @@ test('a mesh:// invite link that launched the app opens the join flow prefilled'
   page,
 }) => {
   await installMockBackend(page, { pendingInvite: LINK_TOKEN })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
 
   // Straight into the join flow with the token already pasted and validated.
   await expect(page.getByTestId('invite-input')).toHaveValue(LINK_TOKEN)
@@ -20,7 +20,7 @@ test('a mesh:// invite link that launched the app opens the join flow prefilled'
 
 test('an invite link clicked while the app is open jumps to the join flow', async ({ page }) => {
   await installMockBackend(page)
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('welcome-join')).toBeVisible()
 
   // The backend broadcasts invite_link when the OS hands it a mesh:// URL.
@@ -38,7 +38,7 @@ test('an invite link clicked while the app is open jumps to the join flow', asyn
 
 test('the invite modal offers a one-click shareable link', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   await page.getByTestId('invite-button').click()

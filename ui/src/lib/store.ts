@@ -94,7 +94,7 @@ export function connect() {
   if (appEvents) return
   appEvents = new EventSource('/app/events')
   appEvents.onopen = () => set({ connected: true })
-  appEvents.onerror = () => set({ connected: false })
+  appEvents.onerror = () => set({ connected: false, status: null })
   appEvents.onmessage = (msg) => {
     let event: AppEvent
     try {
@@ -135,8 +135,9 @@ function startStatusFeed() {
     try {
       const resp = await fetch('/api/status')
       if (resp.ok) apply(await resp.json())
+      else set({ status: null })
     } catch {
-      /* node may be mid-restart */
+      set({ status: null }) // Do not retain stale hardware/identity after a failed read.
     }
   }
   void poll()

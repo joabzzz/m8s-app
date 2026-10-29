@@ -3,7 +3,7 @@ import { installMockBackend } from '../support/mock-backend'
 
 test.beforeEach(async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 })
 
@@ -89,7 +89,7 @@ test('restores the ongoing conversation on launch (persistent session)', async (
       { id: 'h2', role: 'assistant', text: 'We called it mesh-console.' },
     ],
   })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   // The prior turns repaint instead of the "Say hello." empty state.
@@ -108,7 +108,7 @@ test('"New chat" starts a new local session and keeps the previous chat listed',
       { id: 'h2', role: 'assistant', text: 'noted.' },
     ],
   })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('user-message')).toContainText('remember this')
 
   // The old Goose session remains in the left rail; a fresh session becomes active.
@@ -134,7 +134,7 @@ test('renders a markdown table as a real table, not raw pipes', async ({ page })
       },
     ],
   })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   const answer = page.getByTestId('assistant-text')
@@ -154,7 +154,7 @@ test('a chat can be archived to history and restored', async ({ page }) => {
       { id: 'h2', role: 'assistant', text: 'okay' },
     ],
   })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   const chat = page.getByTestId('chat-session').first()
   await chat.click({ button: 'right' })
   await expect(page.getByTestId('chat-session')).toHaveCount(0)
@@ -166,7 +166,7 @@ test('a chat can be archived to history and restored', async ({ page }) => {
 
 test('empty new chats remain one disposable draft until prompted', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('chat-draft')).toHaveCount(1)
   await expect(page.getByTestId('chat-session')).toHaveCount(0)
   await page.getByTestId('chat-new').click()

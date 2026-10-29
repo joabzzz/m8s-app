@@ -1,4 +1,14 @@
-# Mesh — a friendly desktop app for mesh-llm
+# m8s-app — experimental compute console
+
+Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
+Fleet overview is the default landing page; `?view=mesh` opens the original
+mesh setup/chat entry point. The Mesh logo returns to the compute workspace.
+The first UI slice observes peers and node role; authenticated rental attachment
+and provider actions are still under development. See [the decision record](docs/decisions/001-compute-console.md).
+
+Desktop builds are for local testing and demo capture.
+
+## Upstream desktop experience
 
 A macOS desktop app (proof of concept) that makes sovereign, peer-to-peer AI —
 powered by the open-source [mesh-llm](../mesh-llm) project — usable by complete

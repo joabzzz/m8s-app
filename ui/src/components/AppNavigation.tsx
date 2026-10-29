@@ -25,7 +25,12 @@ export default function AppNavigation({
       className="flex h-12 shrink-0 items-center border-b border-edge bg-panel px-4"
       data-testid="app-navigation"
     >
-      <MeshLogo variant="mark" className="mr-6 w-[28px]" />
+      <button
+        aria-label="Open compute workspace"
+        onClick={() => window.dispatchEvent(new Event('m8s-open-compute'))}
+      >
+        <MeshLogo variant="mark" className="mr-6 w-[28px]" />
+      </button>
       <nav className="flex h-full items-center gap-1" aria-label="Main navigation">
         <NavButton active={current === 'home'} onClick={onHome} icon={Home} testId="nav-home">
           Home

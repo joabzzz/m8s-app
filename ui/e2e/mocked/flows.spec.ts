@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('welcome screen heroes the global mesh with the private options below', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByText('Your own AI. On your own machines.')).toBeVisible()
   await expect(page.getByTestId('welcome-public')).toBeVisible()
   await expect(page.getByTestId('welcome-public')).toContainText('global mesh')
@@ -18,7 +18,7 @@ test('welcome screen heroes the global mesh with the private options below', asy
 })
 
 test('global mesh: "just connect" joins as a public passive client', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-public').click()
   await expect(page.getByTestId('public-join-screen')).toBeVisible()
   // "Just connect" is preselected — continue straight through.
@@ -50,7 +50,7 @@ test('global mesh: "just connect" joins as a public passive client', async ({ pa
 })
 
 test('global mesh: passive client upgrades to sharing this Mac’s compute', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-public').click()
   await page.getByTestId('public-continue').click()
 
@@ -97,7 +97,7 @@ test('global mesh: passive client upgrades to sharing this Mac’s compute', asy
 
 test('Home keeps the active mesh running and Chat returns seamlessly', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   await page.getByTestId('nav-home').click()
@@ -117,7 +117,7 @@ test('Home keeps the active mesh running and Chat returns seamlessly', async ({ 
 
 test('choosing another mesh confirms before shutdown and relaunch', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('nav-home').click()
   await page.getByTestId('welcome-public').click()
   await page.getByTestId('public-continue').click()
@@ -169,7 +169,7 @@ test('main window offers "start sharing" to a public chat-only client', async ({
     },
     installedInDiagnose: true,
   })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toContainText('Global mesh')
 
   // The chat-only note is an action on the global mesh.
@@ -212,7 +212,7 @@ test('main window offers "start sharing" to a public chat-only client', async ({
 test('global mesh: "run a model" routes through the hardware check, then contributes', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-public').click()
   await page.getByTestId('public-mode-contribute').click()
   await page.getByTestId('public-continue').click()
@@ -243,7 +243,7 @@ test('global mesh: "run a model" routes through the hardware check, then contrib
 
 test('setup skips the scan when a model is already downloaded', async ({ page }) => {
   await installMockBackend(page, { installedInDiagnose: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-host').click()
 
   // Straight to the installed picker — no "Checking your Mac…" beat.
@@ -258,7 +258,7 @@ test('setup skips the scan when a model is already downloaded', async ({ page })
 test('host flow: scan → reveal → visibility → progress → mesh live with QR → main window', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-host').click()
 
   // The hardware scan beat
@@ -322,7 +322,7 @@ test('host flow: scan → reveal → visibility → progress → mesh live with 
 test('join flow validates the invite code and reaches the main window as chat-only', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-join').click()
 
   const input = page.getByTestId('invite-input')
@@ -357,7 +357,7 @@ test('join flow validates the invite code and reaches the main window as chat-on
 
 test('remembers the last mesh and offers "Back to mesh" on a fresh open', async ({ page }) => {
   // Launch the global mesh as a passive client, reaching the main window.
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-public').click()
   await page.getByTestId('public-continue').click()
   await expect(page.getByTestId('start-chatting')).toBeVisible({ timeout: 10_000 })
@@ -380,7 +380,7 @@ test('remembers the last mesh and offers "Back to mesh" on a fresh open', async 
 })
 
 test('"Start fresh" forgets the remembered mesh so the banner stays gone', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('welcome-public').click()
   await page.getByTestId('public-continue').click()
   await expect(page.getByTestId('start-chatting')).toBeVisible({ timeout: 10_000 })
@@ -397,7 +397,7 @@ test('"Start fresh" forgets the remembered mesh so the banner stays gone', async
 })
 
 test('settings is accessible from the start screen before connecting', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await page.getByTestId('nav-settings').click()
 
   await expect(page.getByTestId('settings-view')).toBeVisible()
@@ -412,7 +412,7 @@ test('settings is accessible from the start screen before connecting', async ({ 
 
 test('appearance setting flips to light mode and persists across reload', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   await page.getByTestId('nav-settings').click()
@@ -435,7 +435,7 @@ test('appearance setting flips to light mode and persists across reload', async 
 
 test('vinyl theme applies the retro palette and persists across reload', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   await page.getByTestId('nav-settings').click()
@@ -455,7 +455,7 @@ test('vinyl theme applies the retro palette and persists across reload', async (
 
 test('settings view can leave the active mesh', async ({ page }) => {
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
 
   await page.getByTestId('nav-settings').click()
@@ -474,7 +474,7 @@ test('settings view can leave the active mesh', async ({ page }) => {
 test('invite modal shows QR and copyable code from the main window', async ({ page }) => {
   // Boot directly into running state
   await installMockBackend(page, { startRunning: true })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
   await expect(page.getByTestId('mesh-name')).toBeVisible()
   await page.getByTestId('invite-button').click()
   await expect(page.getByTestId('invite-modal')).toBeVisible()

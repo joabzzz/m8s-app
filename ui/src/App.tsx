@@ -1,3 +1,4 @@
+import Compute from './screens/Compute'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import SwitchMeshDialog from './components/SwitchMeshDialog'
 import Welcome from './screens/Welcome'
@@ -16,6 +17,7 @@ import { clearLastConfig, loadLastConfig, saveLastConfig, type LaunchConfig } fr
 import type { Visibility as Vis } from './lib/types'
 
 type AppView =
+  | { name: 'compute' }
   | { name: 'welcome' }
   | { name: 'join'; prefillToken?: string }
   | { name: 'join-setup'; token: string } // power setup for join-and-share
@@ -31,7 +33,11 @@ type View = AppView | { name: 'settings'; from: AppView }
 
 export default function App() {
   const { phase, lastNodeEvent } = useApp()
-  const [view, setView] = useState<View>({ name: 'welcome' })
+  const [view, setView] = useState<View>(() =>
+    new URLSearchParams(location.search).get('view') === 'mesh'
+      ? { name: 'welcome' }
+      : { name: 'compute' },
+  )
   const [booted, setBooted] = useState(false)
   // A model queued to share on the global mesh. A chat-only client node has no
   // AI runtime, so upgrading means shutdown + rejoin with share:true — and
@@ -54,7 +60,12 @@ export default function App() {
     appApi
       .state()
       .then((p) => {
-        if (p.phase === 'running') setView({ name: 'main' })
+        if (p.phase === 'running')
+          setView(
+            new URLSearchParams(location.search).get('view') === 'mesh'
+              ? { name: 'main' }
+              : { name: 'compute' },
+          )
         else if (p.phase !== 'idle' && p.phase !== 'error')
           setView({ name: 'progress', goal: 'host' })
       })
@@ -69,6 +80,12 @@ export default function App() {
       .catch(() => {
         /* older backend without the endpoint — links still arrive via SSE */
       })
+  }, [])
+
+  useEffect(() => {
+    const show = () => setView({ name: 'compute' })
+    window.addEventListener('m8s-open-compute', show)
+    return () => window.removeEventListener('m8s-open-compute', show)
   }, [])
 
   // Invite links clicked while the app is already running arrive as an
@@ -228,6 +245,13 @@ export default function App() {
   )
 
   switch (view.name) {
+    case 'compute':
+      return (
+        <Compute
+          onMesh={() => setView({ name: 'welcome' })}
+          onChat={() => setView({ name: 'main' })}
+        />
+      )
     case 'welcome':
       return withSwitchDialog(
         <Welcome
