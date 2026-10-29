@@ -1,6 +1,6 @@
 # ADR 002 — Current-mesh compute and local owner custody
 
-Status: attachment and removal live demonstrated; inference validation in progress, 2026-10-29. Supersedes the dedicated
+Status: attachment and removal live demonstrated; inference not yet live qualified, 2026-10-29. Supersedes the dedicated
 owner-client topology for new desktop bookings; the older opt-in demo remains.
 
 The desktop owns one embedded Mesh node, which can be a passive client or a
@@ -64,5 +64,19 @@ Native validation exposed SDK-version differences in OpenAI model listing: the
 controller now accepts only the pinned HF alias or its exact pinned native source
 identity and sends the discovered identity, still requiring the exact native
 identity in the completion response. No substring matching or arbitrary fallback.
-Home groups rotated invites by their embedded mesh ID for display only; equal
-names do not merge meshes and invite metadata never establishes authority.
+Home records the verified active mesh ID separately from the invite: this SDK’s
+invite contains a bootstrap node ID, not a mesh ID. Rotated invites group by the
+saved mesh ID for display only. Equal names never merge unknown meshes.
+
+Final 2026-10-29 validation: instance 58297997 authenticated successfully but
+reported a native model-download error and never joined as a serving peer. It
+was removed through the desktop removal API; exact absence was confirmed at Unix
+1793303179. A targeted retry of the first machine refused during fresh offer
+qualification, before launch intent or CREATE. Final inventory at Unix 1793303306
+was zero instances and zero volumes. Current-mesh inference remains unqualified;
+the corrected exact-ID discovery needs a successful live completion. Retain both
+unsettled reservations. Do not label the current-mesh demo fully ready yet.
+
+Rental status now projects only closed startup milestones and a download-error
+label; it never forwards native log lines. A completed mesh-wide canary is labeled
+“Mesh inference verified”, not proof of readiness of an arbitrary new host.

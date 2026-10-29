@@ -24,7 +24,7 @@ interface WelcomeProps {
   onJoin: (prefillToken?: string) => void
   onHost: () => void
   onOpenSettings: () => void
-  activeMesh?: { name: string; isPublic: boolean; token?: string | null }
+  activeMesh?: { name: string; isPublic: boolean; token?: string | null; meshId?: string }
   onReturnToChat?: () => void
 }
 
@@ -89,14 +89,14 @@ export default function Welcome({
 
   const seen = new Set<string>()
   if (activeMesh?.isPublic) seen.add('public')
-  const activeId = inviteMeshId(activeMesh?.token)
+  const activeId = activeMesh?.meshId ?? inviteMeshId(activeMesh?.token)
   if (activeId) seen.add(`mesh:${activeId}`)
   const visibleRecent = recent.filter((row) => {
     const id =
       row.config.kind === 'public'
         ? 'public'
         : row.config.kind === 'join'
-          ? `mesh:${inviteMeshId(row.config.token) ?? row.config.token}`
+          ? `mesh:${row.mesh_id ?? inviteMeshId(row.config.token) ?? row.config.token}`
           : null
     if (!id) return true
     if (seen.has(id)) return false

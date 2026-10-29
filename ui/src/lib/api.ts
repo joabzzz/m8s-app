@@ -9,6 +9,7 @@ import type {
 } from './types'
 
 export interface SavedMesh {
+  mesh_id?: string
   name: string
   config: import('./session').LaunchConfig
 }

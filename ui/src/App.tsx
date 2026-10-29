@@ -38,7 +38,7 @@ type AppView =
 type View = AppView | { name: 'settings'; from: AppView }
 
 export default function App() {
-  const { phase, lastNodeEvent, connected } = useApp()
+  const { phase, lastNodeEvent, connected, status } = useApp()
   const [view, setView] = useState<View>({ name: 'welcome' })
   const [rental, setRental] = useState<ComputeStatus | null>(null)
   useEffect(() => {
@@ -293,6 +293,7 @@ export default function App() {
             (running.visibility === 'public' ? 'Global mesh' : 'Your private mesh'),
           isPublic: running.visibility === 'public',
           token: running.invite_token,
+          meshId: status?.mesh_id,
         }
       : undefined
   const destinationLabel = pendingSwitch

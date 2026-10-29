@@ -370,22 +370,25 @@ test('Home groups rotated invites by mesh identity without merging equal names',
   await installMockBackend(page)
   await page.addInitScript(() => {
     const original = window.fetch
-    const token = (mesh_id: string, node: string) =>
-      btoa(JSON.stringify({ mesh_id, bootstrap: [node] })).replace(/=/g, '')
+    const token = (node: string) =>
+      btoa(JSON.stringify({ id: node, addrs: ['synthetic-address-padding'] })).replace(/=/g, '')
     window.fetch = async (input, init) =>
       String(input) === '/app/meshes'
         ? Response.json([
             {
               name: 'Studio',
-              config: { kind: 'join', token: token('mesh-one', 'new-node'), share: false },
+              mesh_id: 'mesh-one',
+              config: { kind: 'join', token: token('new-node'), share: false },
             },
             {
               name: 'Studio',
-              config: { kind: 'join', token: token('mesh-one', 'old-node'), share: false },
+              mesh_id: 'mesh-one',
+              config: { kind: 'join', token: token('old-node'), share: false },
             },
             {
               name: 'Studio',
-              config: { kind: 'join', token: token('mesh-two', 'another-node'), share: false },
+              mesh_id: 'mesh-two',
+              config: { kind: 'join', token: token('another-node'), share: false },
             },
           ])
         : original(input, init)

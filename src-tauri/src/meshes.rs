@@ -68,6 +68,8 @@ pub enum Reconnect {
 #[serde(deny_unknown_fields)]
 pub struct SavedMesh {
     name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    mesh_id: Option<String>,
     config: Reconnect,
 }
 fn history_path() -> std::path::PathBuf {
@@ -91,7 +93,8 @@ pub async fn saved_meshes() -> Json<Vec<SavedMesh>> {
     Json(read_history())
 }
 pub async fn remember_mesh(
-    Json(entry): Json<SavedMesh>,
+    State(state): State<Arc<AppState>>,
+    Json(mut entry): Json<SavedMesh>,
 ) -> Result<Json<Value>, axum::http::StatusCode> {
     use axum::http::StatusCode;
     let valid = entry.name.len() <= 128
@@ -109,16 +112,24 @@ pub async fn remember_mesh(
     if !valid {
         return Err(StatusCode::BAD_REQUEST);
     }
+    // Old SDK invites identify a bootstrap node, not the mesh. Record the
+    // active mesh ID separately; never infer identity from its display name.
+    entry.mesh_id = None;
+    if let crate::state::Phase::Running(running) = state.phase().await {
+        let matches = match &entry.config {
+            Reconnect::Public { .. } => running.visibility == crate::state::Visibility::Public,
+            Reconnect::Join { token, .. } => running.invite_token.as_ref() == Some(token),
+        };
+        if matches && let Ok((target, _)) = crate::attachment::target(&state).await {
+            entry.mesh_id = Some(target.mesh_id);
+        }
+    }
     // Serialize read/modify/write within this process; atomic replacement keeps
     // readers from seeing truncated JSON. This is reconnect history, not authority.
     static WRITE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     let _guard = WRITE.lock().await;
     let mut entries = read_history();
-    entries.retain(|old| match (&old.config, &entry.config) {
-        (Reconnect::Public { .. }, Reconnect::Public { .. }) => false,
-        (Reconnect::Join { token: a, .. }, Reconnect::Join { token: b, .. }) => a != b,
-        _ => true,
-    });
+    entries.retain(|old| !same_mesh(old, &entry));
     entries.insert(0, entry);
     entries.truncate(8);
     let path = history_path();
@@ -139,4 +150,41 @@ pub async fn remember_mesh(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     std::fs::rename(tmp, path).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(json!({"ok":true})))
+}
+
+fn same_mesh(a: &SavedMesh, b: &SavedMesh) -> bool {
+    if let (Some(a), Some(b)) = (&a.mesh_id, &b.mesh_id) {
+        return a == b;
+    }
+    match (&a.config, &b.config) {
+        (Reconnect::Public { .. }, Reconnect::Public { .. }) => true,
+        (Reconnect::Join { token: a, .. }, Reconnect::Join { token: b, .. }) => a == b,
+        _ => false,
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn rotated_node_invites_group_only_when_mesh_identity_matches() {
+        let row = |id: Option<&str>, token: &str| SavedMesh {
+            name: "Same name".into(),
+            mesh_id: id.map(str::to_owned),
+            config: Reconnect::Join {
+                token: token.into(),
+                share: false,
+                model: None,
+            },
+        };
+        assert!(same_mesh(
+            &row(Some("mesh-a"), "old"),
+            &row(Some("mesh-a"), "new")
+        ));
+        assert!(!same_mesh(
+            &row(Some("mesh-a"), "old"),
+            &row(Some("mesh-b"), "new")
+        ));
+        assert!(!same_mesh(&row(None, "old"), &row(None, "new")));
+        assert!(same_mesh(&row(None, "same"), &row(Some("mesh-a"), "same")));
+    }
 }
