@@ -29,6 +29,8 @@ test('Compute onboards Vast without retaining the key in browser storage', async
   })
   await page.goto('/')
   await page.getByTestId('nav-compute').click()
+  await expect(page.getByRole('region', { name: 'Compute providers' })).toBeHidden()
+  await page.getByRole('button', { name: 'Providers', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Compute providers' })).toContainText(
     'Not connected',
   )
