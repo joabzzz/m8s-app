@@ -1,12 +1,15 @@
 # m8s-app — experimental compute console
 
 Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
-Fleet overview is the default landing page; `?view=mesh` opens the original
-mesh setup/chat entry point. The Mesh logo returns to the compute workspace.
-Fleet observes peers and node role. An opt-in [managed rental session](docs/M8S_DEMO.md)
+Home is the landing page, with active local meshes and recent connections.
+Chat and Compute appear as top tabs only while attached to a mesh. A private mesh
+can start as a passive client without downloading a model; local model sharing is
+an explicit alternative. Recent private meshes retain their invite for reconnecting.
+
+The Compute tab observes peers and node role. An opt-in [managed rental session](docs/M8S_DEMO.md)
 connects to one m8sd attempt, verifies its dedicated local owner, and exposes
-Add compute, pinned inference and confirmed removal. Attaching to an arbitrary
-existing mesh, offer browsing and multiple rentals remain under development.
+Add compute, pinned inference and confirmed removal. Attaching rentals to an
+arbitrary existing mesh, offer browsing and multiple rentals remain under development.
 See [the decision record](docs/decisions/001-compute-console.md).
 
 Desktop builds are for local testing and demo capture. The native bundle is

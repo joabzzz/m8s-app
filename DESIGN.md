@@ -88,6 +88,13 @@ untestable UI layer).
 ## 4. How the pieces work
 
 ### Navigation and mesh switching
+- m8s opens Home. Chat and Compute are attached-mesh tabs. Home shows the current
+  connection, live instances from Mesh's per-user runtime inventory, and up to
+  eight successful reconnect configurations persisted privately by the backend.
+- Private creation defaults to a model-free client; serving a model is optional.
+- Process initialization replaces stdin with /dev/null before threading. The
+  progress sink must never activate a terminal UI inside the desktop: tcsetattr
+  on a background terminal caused the entire GUI/backend to be suspended.
 - The running node is independent from the visible page. Home and Chat share a
   top navigation bar; opening Home does not call shutdown, and the connection
   pill returns directly to the live chat.

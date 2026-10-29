@@ -245,6 +245,8 @@ test('setup skips the scan when a model is already downloaded', async ({ page })
   await installMockBackend(page, { installedInDiagnose: true })
   await page.goto('/?view=mesh')
   await page.getByTestId('welcome-host').click()
+  await page.getByTestId('private-mode-serve').click()
+  await page.getByTestId('private-continue').click()
 
   // Straight to the installed picker — no "Checking your Mac…" beat.
   await expect(page.getByTestId('installed-screen')).toBeVisible({ timeout: 6000 })
@@ -260,6 +262,8 @@ test('host flow: scan → reveal → visibility → progress → mesh live with 
 }) => {
   await page.goto('/?view=mesh')
   await page.getByTestId('welcome-host').click()
+  await page.getByTestId('private-mode-serve').click()
+  await page.getByTestId('private-continue').click()
 
   // The hardware scan beat
   await expect(page.getByText('Checking your Mac...')).toBeVisible()

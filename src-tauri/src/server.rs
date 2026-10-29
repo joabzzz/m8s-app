@@ -22,6 +22,11 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/app/compute/up", post(crate::compute::up))
         .route("/app/compute/down", post(crate::compute::down))
         .route("/app/state", get(app_state))
+        .route(
+            "/app/meshes",
+            get(crate::meshes::saved_meshes).post(crate::meshes::remember_mesh),
+        )
+        .route("/app/local-meshes", get(crate::meshes::local_meshes))
         .route("/app/events", get(app_events))
         .route("/app/diagnose", post(app_diagnose))
         .route("/app/host", post(app_host))
@@ -56,12 +61,13 @@ async fn app_state(State(state): State<Arc<AppState>>) -> Json<Phase> {
 async fn app_events(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
+    let receiver = state.events.subscribe();
     let current = state.phase().await;
     let first = futures_util::stream::once(async move {
         Ok(Event::default()
             .data(serde_json::to_string(&crate::events::AppEvent::Phase(current)).unwrap()))
     });
-    let live = BroadcastStream::new(state.events.subscribe()).filter_map(|event| async move {
+    let live = BroadcastStream::new(receiver).filter_map(|event| async move {
         let event = event.ok()?;
         let data = serde_json::to_string(&event).ok()?;
         Some(Ok(Event::default().data(data)))
@@ -321,7 +327,18 @@ async fn ready_for_launch(state: &Arc<AppState>) -> bool {
     if state.compute.is_some() {
         return false;
     }
-    matches!(state.phase().await, Phase::Idle | Phase::Error { .. })
+    let mut phase = state.phase.write().await;
+    if !matches!(*phase, Phase::Idle | Phase::Error { .. }) {
+        return false;
+    }
+    *phase = Phase::Starting {
+        mode: crate::state::Mode::Join,
+        model: None,
+    };
+    let _ = state
+        .events
+        .send(crate::events::AppEvent::Phase(phase.clone()));
+    true
 }
 
 async fn busy_response(state: &Arc<AppState>) -> Response {

@@ -48,6 +48,7 @@ pub struct Ports {
 }
 
 pub struct AppState {
+    pub lifecycle: Mutex<()>,
     pub compute: Option<Arc<crate::compute::Compute>>,
     pub phase: RwLock<Phase>,
     pub node: Mutex<Option<mesh_llm_sdk::MeshNode>>,
@@ -67,6 +68,7 @@ impl AppState {
     pub fn new(ports: Ports) -> Arc<Self> {
         let (events, _) = broadcast::channel(512);
         Arc::new(Self {
+            lifecycle: Mutex::new(()),
             compute: crate::compute::Compute::from_env()
                 .expect("Invalid explicit m8s desktop configuration"),
             phase: RwLock::new(Phase::Idle),
@@ -74,7 +76,12 @@ impl AppState {
             agent: Mutex::new(None),
             events,
             ports,
-            http: reqwest::Client::new(),
+            http: reqwest::Client::builder()
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .connect_timeout(std::time::Duration::from_secs(3))
+                .build()
+                .expect("local HTTP client"),
             pending_invite: std::sync::Mutex::new(None),
         })
     }

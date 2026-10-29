@@ -5,12 +5,13 @@ import MeshLogo from '../components/MeshLogo'
 import MeshMark from '../components/MeshMark'
 import MeshViz from '../components/MeshViz'
 import { Card, ReassuranceLine } from '../components/ui'
-import { looksLikeInviteToken } from '../lib/api'
+import { appApi, type SavedMesh, type LocalMesh, looksLikeInviteToken } from '../lib/api'
 import { lastConfigLabel, type LaunchConfig } from '../lib/session'
 
 interface WelcomeProps {
   /** The last mesh this app launched, if any — powers "Back to mesh". */
   lastConfig: LaunchConfig | null
+  onReconnect: (config: LaunchConfig) => void
   onResume: () => void
   onStartFresh: () => void
   onJoinPublic: () => void
@@ -24,6 +25,7 @@ interface WelcomeProps {
 export default function Welcome({
   lastConfig,
   onResume,
+  onReconnect,
   onStartFresh,
   onJoinPublic,
   onJoin,
@@ -32,6 +34,31 @@ export default function Welcome({
   activeMesh,
   onReturnToChat,
 }: WelcomeProps) {
+  const [recent, setRecent] = useState<SavedMesh[]>([])
+  const [local, setLocal] = useState<LocalMesh[]>([])
+  useEffect(() => {
+    let stopped = false
+    const poll = async () => {
+      try {
+        const rows = await appApi.localMeshes()
+        if (!stopped) setLocal(rows.instances ?? [])
+      } catch {
+        if (!stopped) setLocal([])
+      }
+    }
+    void appApi
+      .meshes()
+      .then((rows) => {
+        if (!stopped && Array.isArray(rows)) setRecent(rows)
+      })
+      .catch(() => {})
+    void poll()
+    const timer = setInterval(() => void poll(), 10000)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+    }
+  }, [])
   const [clipboardToken, setClipboardToken] = useState<string | null>(null)
   const [dismissed, setDismissed] = useState(false)
   const showResume = lastConfig !== null && !dismissed
@@ -73,7 +100,64 @@ export default function Welcome({
         <div className="relative z-10 mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-8 px-8 py-8">
           <MeshLogo className="w-24" />
 
-          {showResume && lastConfig && (
+          {(activeMesh || local.length > 0 || recent.length > 0) && (
+            <section
+              className="w-full rounded-(--radius-card) border border-edge bg-panel p-4"
+              aria-label="Your meshes"
+            >
+              <h2 className="mb-3 text-sm font-semibold">Your meshes</h2>
+              {activeMesh && (
+                <button
+                  className="mb-2 flex w-full items-center justify-between rounded-(--radius-control) bg-inset p-3 text-left text-sm"
+                  onClick={onReturnToChat}
+                >
+                  <span>{activeMesh.name}</span>
+                  <span className="text-good">Connected · Open</span>
+                </button>
+              )}
+              {local
+                .filter((row) => !row.is_self)
+                .map((row) => (
+                  <div
+                    key={row.node_id}
+                    className="flex items-center justify-between border-t border-edge py-3 text-sm"
+                  >
+                    <span>
+                      {row.name}
+                      <small className="block text-ink-faint">
+                        Running on this device · {row.role}
+                      </small>
+                    </span>
+                    <button
+                      className="text-accent disabled:opacity-40"
+                      disabled={!row.token}
+                      onClick={() =>
+                        row.token && onReconnect({ kind: 'join', token: row.token, share: false })
+                      }
+                    >
+                      Join mesh
+                    </button>
+                  </div>
+                ))}
+              {recent.map((row, index) => (
+                <button
+                  key={index}
+                  onClick={() => onReconnect(row.config)}
+                  className="flex w-full items-center justify-between border-t border-edge py-3 text-left text-sm"
+                  data-testid="recent-mesh"
+                >
+                  <span>
+                    {row.name}
+                    <small className="block text-ink-faint">
+                      Recently connected · availability checked on join
+                    </small>
+                  </span>
+                  <span className="text-accent">Reconnect</span>
+                </button>
+              ))}
+            </section>
+          )}
+          {showResume && lastConfig && !activeMesh && recent.length === 0 && (
             <div
               data-testid="resume-banner"
               className="flex w-full items-center gap-3 rounded-(--radius-card) border border-accent/60 bg-accent/[0.07] px-4 py-3"

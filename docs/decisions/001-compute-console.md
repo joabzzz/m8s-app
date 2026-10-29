@@ -74,3 +74,45 @@ unset and isolated Goose storage. Inspected the m8s window through cmux: Fleet
 renders, absent node identity is shown as unavailable, metrics are unknown and
 owner attachment is required. This checks the native WebView/backend path, not
 live rental provisioning or inference.
+
+## Home and mesh-scoped navigation (user correction, 2026-10-29)
+
+Home is again the default landing screen. Chat and Compute are top-level tabs
+shown only for an attached running mesh; Home retains the current connection.
+Recent successful connections are persisted in a mode-0600 backend history file
+under the app's data root so they survive changes in the WebView origin/port.
+Private connections retain an invite for reconnecting to the same mesh rather
+than silently creating a fresh network. Expired/unreachable invites report join
+errors. The history is convenience state, not a rental authorization grant.
+
+Home also scans Mesh's local runtime inventory and probes live loopback management
+endpoints. Joining a discovered mesh creates this app's client; it does not take
+over or stop the other process and does not authenticate rental ownership.
+Unresponsive instances are omitted. Passive private creation uses the client SDK
+without model/runtime installation. Model sharing remains a separate choice.
+
+## Native public-join suspension
+
+The observed app process was stopped (`T` state), and a macOS sample located its
+interactive TUI thread in `crossterm::enable_raw_mode` / `tcsetattr`. The desktop's
+progress sink advertises InteractiveDashboard for download events, which also
+allowed the embedded runtime to start terminal input handling. Background-terminal
+job control then suspended the GUI and both HTTP servers.
+
+The desktop and headless HTTP daemon now replace stdin with /dev/null before
+creating threads. They retain progress events but are never terminal input
+consumers. Launch HTTP errors are displayed, state polling backs up SSE, and
+mesh-only navigation disappears when the backend disconnects. Launch admission
+reserves its phase before spawning; shutdown and startup serialize lifecycle work.
+
+Live local validation: a model-free private mesh reached Running, shut down to
+Idle, then public passive join reached Running with responsive management status
+and shut down to Idle. No GPU rental or model download was needed. The older
+embedded SDK also logs duplicate relay identity and ungraceful endpoint-close
+warnings; these did not prevent this check but remain upstream integration work.
+
+Final validation for this correction: 25 Rust tests, strict all-target Clippy,
+UI build/lint/formatting and all 38 mocked browser tests pass. Repeated native
+private/public start-stop checks with stdin explicitly inherited from /dev/tty
+also pass, confirming initialization removes the terminal input dependency.
+Recent meshes survived native restart (three saved test connections observed).

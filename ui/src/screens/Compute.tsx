@@ -34,7 +34,7 @@ export default function Compute({
   const models = [...new Set(peers.flatMap((p) => p.serving_models ?? p.models ?? []))]
   const speed = rental ? undefined : status?.tok_per_sec
   return (
-    <div className="flex h-screen bg-bg text-ink" data-testid="compute-screen">
+    <div className="flex h-full bg-bg text-ink" data-testid="compute-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-panel p-5">
         <div className="mb-10 flex items-center gap-3">
           <Cpu className="text-accent" size={24} />

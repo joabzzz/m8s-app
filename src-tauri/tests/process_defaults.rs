@@ -8,6 +8,12 @@ fn seeds_auto_compact_threshold() {
 
     mesh_console::init_process_defaults();
 
+    use std::io::IsTerminal;
+    assert!(
+        !std::io::stdin().is_terminal(),
+        "embedded desktop must not spawn a TUI"
+    );
+
     // Fixed at 0.4: compact early for small mesh models + the long-lived session.
     assert_eq!(
         std::env::var("GOOSE_AUTO_COMPACT_THRESHOLD").unwrap(),
