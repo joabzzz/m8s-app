@@ -299,6 +299,9 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
       const path = new URL(url, location.origin).pathname
 
+      if (path === '/app/meshes') return json(init?.method === 'POST' ? { ok: true } : [])
+      if (path === '/app/local-meshes') return json({ instances: [] })
+      if (path === '/app/compute') return json({ enabled: false })
       if (path === '/app/state') return json(state.phase)
       if (path === '/app/diagnose') {
         if (opts.installedInDiagnose) {
@@ -315,8 +318,13 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
         const body = JSON.parse(String(init?.body ?? '{}'))
         state.hostCalls.push(body)
         void runLaunchSequence(
-          { mode: 'host', model: body.model, visibility: body.visibility, serving: true },
-          true,
+          {
+            mode: 'host',
+            model: body.model,
+            visibility: body.visibility,
+            serving: Boolean(body.model),
+          },
+          Boolean(body.model),
         )
         return json({ ok: true }, 202)
       }
@@ -348,6 +356,7 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
         emitApp({ type: 'phase', phase: 'idle' })
         return json({ ok: true })
       }
+      if (path === '/app/rentals') return json({ configured: false, rental: null })
       if (path === '/api/status') return json(STATUS)
       if (path === '/api/models') return json({ mesh_models: [] })
       if (path === '/v1/models')

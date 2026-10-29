@@ -3,16 +3,32 @@
 #![recursion_limit = "256"]
 
 pub mod agent;
+pub mod attachment;
+pub mod catalog;
+pub mod compute;
 pub mod diagnose;
 pub mod events;
+pub mod meshes;
 pub mod node;
 pub mod proxy;
+pub mod rentals;
 pub mod server;
 pub mod state;
 
 /// Process-wide defaults shared by the desktop shell and the headless daemon.
 /// Call before spawning any threads.
 pub fn init_process_defaults() {
+    // The desktop and HTTP daemon never read terminal input. The embedded
+    // runtime otherwise sees the progress sink as an interactive TUI and calls
+    // tcsetattr; a background GUI then receives SIGTTOU and the whole app stops.
+    #[cfg(unix)]
+    {
+        use std::os::fd::AsRawFd;
+        let input = std::fs::File::open("/dev/null").expect("open noninteractive input");
+        // Safety: called before threads; duplicates a valid fd onto stdin.
+        assert!(unsafe { libc::dup2(input.as_raw_fd(), libc::STDIN_FILENO) } >= 0);
+    }
+
     // Force classic HTTP model downloads unless the user opted back in: xet's
     // chunked CAS protocol stalls on some networks (~150KB/s and frozen vs
     // ~14MB/s plain CDN GET). Honored by our hf-hub fork branch (git [patch]).
@@ -28,7 +44,7 @@ pub fn init_process_defaults() {
     if std::env::var_os("GOOSE_PATH_ROOT").is_none() {
         let root = dirs::data_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("mesh-console/goose");
+            .join("m8s-app/goose");
         // Safety: called from main before any other threads exist.
         unsafe { std::env::set_var("GOOSE_PATH_ROOT", root) };
     }

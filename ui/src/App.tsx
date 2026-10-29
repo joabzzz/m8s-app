@@ -1,3 +1,8 @@
+import ComputeDemo, { type ComputeStatus } from './screens/ComputeDemo'
+import Compute from './screens/Compute'
+import AppNavigation from './components/AppNavigation'
+import PrivateCreate from './screens/PrivateCreate'
+import ErrorScreen from './components/ErrorScreen'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import SwitchMeshDialog from './components/SwitchMeshDialog'
 import Welcome from './screens/Welcome'
@@ -16,12 +21,15 @@ import { clearLastConfig, loadLastConfig, saveLastConfig, type LaunchConfig } fr
 import type { Visibility as Vis } from './lib/types'
 
 type AppView =
+  | { name: 'compute' }
+  | { name: 'rental-demo' }
   | { name: 'welcome' }
   | { name: 'join'; prefillToken?: string }
   | { name: 'join-setup'; token: string } // power setup for join-and-share
   | { name: 'public-mode' } // contribute vs passive for the global mesh
   | { name: 'public-setup' } // power setup for a global-mesh contributor
   | { name: 'public-upgrade-setup' } // power setup while already connected passively
+  | { name: 'host-mode' }
   | { name: 'host-setup' }
   | { name: 'host-visibility'; model: string }
   | { name: 'progress'; goal: 'host' | 'join'; flavor?: 'public-passive' | 'public-share' }
@@ -30,8 +38,67 @@ type AppView =
 type View = AppView | { name: 'settings'; from: AppView }
 
 export default function App() {
-  const { phase, lastNodeEvent } = useApp()
+  const { phase, lastNodeEvent, connected, status } = useApp()
   const [view, setView] = useState<View>({ name: 'welcome' })
+  const [rental, setRental] = useState<ComputeStatus | null>(null)
+  useEffect(() => {
+    let stopped = false
+    let first = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const poll = async () => {
+      try {
+        const response = await fetch('/app/compute', { signal: AbortSignal.timeout(5000) })
+        if (!response.ok) throw new Error('Compute status unavailable')
+        const value = await response.json()
+        if (stopped) return
+        if (value?.enabled) {
+          setRental(value as ComputeStatus)
+          if (first && new URLSearchParams(location.search).get('view') === 'rental-demo')
+            setView({ name: 'rental-demo' })
+        } else {
+          setRental((current) => (current ? { ...current, stage: 'uncertain', node: null } : null))
+        }
+        first = false
+      } catch {
+        if (!stopped)
+          setRental((current) => (current ? { ...current, stage: 'uncertain', node: null } : null))
+      } finally {
+        if (!stopped) timer = setTimeout(() => void poll(), 5000)
+      }
+    }
+    void poll()
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+    }
+  }, [])
+  const [launchError, setLaunchError] = useState<string | null>(null)
+  useEffect(() => {
+    if (phase.phase !== 'running') return
+    const last = loadLastConfig()
+    const config: LaunchConfig | null =
+      phase.visibility === 'public'
+        ? { kind: 'public', share: phase.serving, model: phase.model ?? undefined }
+        : phase.invite_token
+          ? {
+              kind: 'join',
+              token: phase.invite_token,
+              share: phase.serving,
+              model: phase.model ?? undefined,
+            }
+          : last?.kind === 'join'
+            ? last
+            : null
+    if (config) {
+      saveLastConfig(config)
+      void appApi
+        .rememberMesh({
+          name: phase.mesh_name ?? (phase.visibility === 'public' ? 'Global mesh' : 'Private mesh'),
+          config,
+        })
+        .catch(() => {})
+    }
+  }, [phase])
   const [booted, setBooted] = useState(false)
   // A model queued to share on the global mesh. A chat-only client node has no
   // AI runtime, so upgrading means shutdown + rejoin with share:true — and
@@ -54,10 +121,16 @@ export default function App() {
     appApi
       .state()
       .then((p) => {
-        if (p.phase === 'running') setView({ name: 'main' })
+        if (p.phase === 'running')
+          setView(
+            new URLSearchParams(location.search).get('view') === 'mesh'
+              ? { name: 'main' }
+              : { name: 'welcome' },
+          )
         else if (p.phase !== 'idle' && p.phase !== 'error')
           setView({ name: 'progress', goal: 'host' })
       })
+      .catch(() => setLaunchError('The local backend is unavailable. Restart m8s and try again.'))
       .finally(() => setBooted(true))
     // A mesh:// invite link may have launched the app before this frontend was
     // listening — drain the backend's one-shot buffer and open the join flow.
@@ -70,6 +143,14 @@ export default function App() {
         /* older backend without the endpoint — links still arrive via SSE */
       })
   }, [])
+
+  useEffect(() => {
+    const show = () => {
+      if (phase.phase === 'running' || rental?.node) setView({ name: 'compute' })
+    }
+    window.addEventListener('m8s-open-compute', show)
+    return () => window.removeEventListener('m8s-open-compute', show)
+  }, [phase.phase, rental])
 
   // Invite links clicked while the app is already running arrive as an
   // invite_link node event over SSE: jump straight into the join flow.
@@ -111,7 +192,9 @@ export default function App() {
       }
       if (pendingShareRef.current === model) {
         saveLastConfig({ kind: 'public', share: true, model })
-        void appApi.join('', true, model, { public: true })
+        void appApi
+          .join('', true, model, { public: true })
+          .catch((error) => setLaunchError(String(error)))
         setPendingShare(null)
         setView({ name: 'progress', goal: 'join', flavor: 'public-share' })
       }
@@ -133,18 +216,21 @@ export default function App() {
   // the right progress screen. One place so every front door remembers itself
   // for the next "Back to mesh".
   const launch = (config: LaunchConfig) => {
+    setLaunchError(null)
     saveLastConfig(config)
+    const failed = (error: unknown) =>
+      setLaunchError(error instanceof Error ? error.message : 'Could not start the mesh')
     switch (config.kind) {
       case 'host':
-        void appApi.host(config.model, config.visibility)
+        void appApi.host(config.model, config.visibility).catch(failed)
         setView({ name: 'progress', goal: 'host' })
         break
       case 'join':
-        void appApi.join(config.token, config.share, config.model)
+        void appApi.join(config.token, config.share, config.model).catch(failed)
         setView({ name: 'progress', goal: 'join' })
         break
       case 'public':
-        void appApi.join('', config.share, config.model, { public: true })
+        void appApi.join('', config.share, config.model, { public: true }).catch(failed)
         setView({
           name: 'progress',
           goal: 'join',
@@ -172,6 +258,9 @@ export default function App() {
       if (requestId !== switchRequestId.current || pendingSwitchRef.current !== config) return
       setSwitchRequest(null)
       launch(config)
+    } catch (error) {
+      setLaunchError(String(error))
+      setSwitchRequest(null)
     } finally {
       setSwitching(false)
     }
@@ -191,20 +280,22 @@ export default function App() {
 
   const leaveMesh = () => {
     setPendingShare(null)
-    clearLastConfig()
-    void appApi.shutdown()
+    void appApi.shutdown().catch((error) => setLaunchError(String(error)))
     setView({ name: 'welcome' })
   }
 
   const running = phase.phase === 'running' ? phase : null
-  const activeMesh = running
-    ? {
-        name:
-          running.mesh_name ??
-          (running.visibility === 'public' ? 'Global mesh' : 'Your private mesh'),
-        isPublic: running.visibility === 'public',
-      }
-    : undefined
+  const activeMesh =
+    running && connected
+      ? {
+          name:
+            running.mesh_name ??
+            (running.visibility === 'public' ? 'Global mesh' : 'Your private mesh'),
+          isPublic: running.visibility === 'public',
+          token: running.invite_token,
+          meshId: status?.mesh_id,
+        }
+      : undefined
   const destinationLabel = pendingSwitch
     ? pendingSwitch.kind === 'public'
       ? 'the Global mesh'
@@ -214,6 +305,14 @@ export default function App() {
     : ''
   const withSwitchDialog = (content: ReactNode) => (
     <>
+      {view.name === 'welcome' && launchError && (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 z-50 max-w-lg -translate-x-1/2 rounded-(--radius-card) border border-warn bg-panel p-4 text-sm"
+        >
+          {launchError}
+        </div>
+      )}
       {content}
       {pendingSwitch && activeMesh && (
         <SwitchMeshDialog
@@ -227,21 +326,53 @@ export default function App() {
     </>
   )
 
+  const renderHome = () =>
+    withSwitchDialog(
+      <Welcome
+        lastConfig={loadLastConfig()}
+        onResume={resume}
+        onReconnect={requestLaunch}
+        onStartFresh={clearLastConfig}
+        onJoinPublic={() => setView({ name: 'public-mode' })}
+        onJoin={(prefillToken) => setView({ name: 'join', prefillToken })}
+        onHost={() => setView({ name: 'host-mode' })}
+        onOpenSettings={() => openSettings({ name: 'welcome' })}
+        activeMesh={activeMesh}
+        onReturnToChat={() => setView({ name: 'main' })}
+      />,
+    )
+  if ((view.name === 'compute' || view.name === 'main') && !activeMesh && !rental?.node)
+    return renderHome()
+
   switch (view.name) {
-    case 'welcome':
-      return withSwitchDialog(
-        <Welcome
-          lastConfig={loadLastConfig()}
-          onResume={resume}
-          onStartFresh={clearLastConfig}
-          onJoinPublic={() => setView({ name: 'public-mode' })}
-          onJoin={(prefillToken) => setView({ name: 'join', prefillToken })}
-          onHost={() => setView({ name: 'host-setup' })}
-          onOpenSettings={() => openSettings({ name: 'welcome' })}
-          activeMesh={activeMesh}
-          onReturnToChat={() => setView({ name: 'main' })}
-        />,
+    case 'rental-demo':
+      return rental ? (
+        <ComputeDemo initial={rental} onBack={() => setView({ name: 'compute' })} />
+      ) : null
+    case 'compute':
+      return (
+        <div className="flex h-screen flex-col">
+          <AppNavigation
+            current="compute"
+            connected={true}
+            meshName={activeMesh?.name}
+            isPublic={activeMesh?.isPublic}
+            onHome={() => setView({ name: 'welcome' })}
+            onChat={() => setView({ name: 'main' })}
+            onSettings={() => openSettings({ name: 'compute' })}
+          />
+          <div className="min-h-0 flex-1">
+            <Compute
+              rental={rental}
+              onRental={rental ? () => setView({ name: 'rental-demo' }) : undefined}
+              onMesh={() => setView({ name: 'welcome' })}
+              onChat={() => setView({ name: 'main' })}
+            />
+          </div>
+        </div>
       )
+    case 'welcome':
+      return renderHome()
 
     case 'public-mode':
       return withSwitchDialog(
@@ -296,10 +427,18 @@ export default function App() {
         />,
       )
 
+    case 'host-mode':
+      return withSwitchDialog(
+        <PrivateCreate
+          onBack={() => setView({ name: 'welcome' })}
+          onPassive={() => requestLaunch({ kind: 'host', visibility: 'private' })}
+          onServe={() => setView({ name: 'host-setup' })}
+        />,
+      )
     case 'host-setup':
       return (
         <PowerSetup
-          onBack={() => setView({ name: 'welcome' })}
+          onBack={() => setView({ name: 'host-mode' })}
           onModelChosen={(model) => setView({ name: 'host-visibility', model })}
         />
       )
@@ -315,6 +454,23 @@ export default function App() {
       )
 
     case 'progress': {
+      if (!connected)
+        return (
+          <ErrorScreen
+            message="Lost connection to the local mesh process. Return Home to reconnect, or restart m8s if it is unresponsive."
+            onReset={() => setView({ name: 'welcome' })}
+          />
+        )
+      if (launchError)
+        return (
+          <ErrorScreen
+            message={launchError}
+            onReset={() => {
+              setLaunchError(null)
+              setView({ name: 'welcome' })
+            }}
+          />
+        )
       // Derived transition: once the backend reaches Running, hosts land on
       // the "mesh is live" QR moment and contributors go straight to the
       // chat. A passive public join instead rests on its own screen ("ready
@@ -344,13 +500,13 @@ export default function App() {
       const cancel = () => {
         setPendingShare(null)
         clearLastConfig()
-        void appApi.shutdown()
+        void appApi.shutdown().catch((error) => setLaunchError(String(error)))
         setView({ name: 'welcome' })
       }
       const errorReset = () => {
         setPendingShare(null)
         clearLastConfig()
-        void appApi.reset()
+        void appApi.reset().catch((error) => setLaunchError(String(error)))
         setView({ name: 'welcome' })
       }
       if (view.flavor) {
@@ -365,7 +521,9 @@ export default function App() {
           />
         )
       }
-      return <Progress onCancel={cancel} onErrorReset={errorReset} />
+      const config = loadLastConfig()
+      const passive = config?.kind === 'host' ? !config.model : config ? !config.share : false
+      return <Progress passive={passive} onCancel={cancel} onErrorReset={errorReset} />
     }
 
     case 'main':

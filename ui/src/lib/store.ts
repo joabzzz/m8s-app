@@ -87,14 +87,34 @@ export function currentSnapshot(): AppSnapshot {
 
 let appEvents: EventSource | null = null
 let statusEvents: EventSource | null = null
+let appPoll: ReturnType<typeof setTimeout> | null = null
+let connectionGeneration = 0
 let statusPoll: ReturnType<typeof setInterval> | null = null
 
 /** Connect the /app/events SSE feed; call once at App mount. */
 export function connect() {
   if (appEvents) return
   appEvents = new EventSource('/app/events')
+  const generation = ++connectionGeneration
+  const pollPhase = async () => {
+    try {
+      const response = await fetch('/app/state', { signal: AbortSignal.timeout(5000) })
+      if (!response.ok) throw new Error('Backend unavailable')
+      const phase = (await response.json()) as Phase
+      if (generation !== connectionGeneration) return
+      if (JSON.stringify(phase) !== JSON.stringify(snapshot.phase)) set({ phase })
+      set({ connected: true })
+      if (phase.phase === 'running') startStatusFeed()
+      else stopStatusFeed()
+    } catch {
+      if (generation === connectionGeneration) set({ connected: false, status: null })
+    } finally {
+      if (generation === connectionGeneration) appPoll = setTimeout(() => void pollPhase(), 5000)
+    }
+  }
+  void pollPhase()
   appEvents.onopen = () => set({ connected: true })
-  appEvents.onerror = () => set({ connected: false })
+  appEvents.onerror = () => set({ connected: false, status: null })
   appEvents.onmessage = (msg) => {
     let event: AppEvent
     try {
@@ -133,10 +153,11 @@ function startStatusFeed() {
   }
   const poll = async () => {
     try {
-      const resp = await fetch('/api/status')
+      const resp = await fetch('/api/status', { signal: AbortSignal.timeout(5000) })
       if (resp.ok) apply(await resp.json())
+      else set({ status: null })
     } catch {
-      /* node may be mid-restart */
+      set({ status: null }) // Do not retain stale hardware/identity after a failed read.
     }
   }
   void poll()
@@ -153,6 +174,9 @@ function stopStatusFeed() {
 
 /** Test hook: reset module state between mocked scenarios. */
 export function _resetForTests() {
+  connectionGeneration++
+  if (appPoll) clearTimeout(appPoll)
+  appPoll = null
   appEvents?.close()
   appEvents = null
   stopStatusFeed()

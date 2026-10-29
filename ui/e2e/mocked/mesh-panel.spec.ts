@@ -22,7 +22,7 @@ test('mesh lives on the right, separates hosts and participants, and collapses',
       },
     ],
   })
-  await page.goto('/')
+  await page.goto('/?view=mesh')
 
   const chats = page.getByTestId('chat-sidebar')
   const mesh = page.getByTestId('mesh-panel')

@@ -18,7 +18,21 @@ struct UiAssets;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/app/rentals", get(crate::rentals::status))
+        .route("/app/rentals/quote", post(crate::rentals::quote))
+        .route("/app/rentals/launch", post(crate::rentals::launch))
+        .route("/app/rentals/remove", post(crate::rentals::remove))
+        .route("/app/compute/bridge", post(crate::attachment::bridge))
+        .route("/app/compute/offers", get(crate::catalog::offers))
+        .route("/app/compute", get(crate::compute::status))
+        .route("/app/compute/up", post(crate::compute::up))
+        .route("/app/compute/down", post(crate::compute::down))
         .route("/app/state", get(app_state))
+        .route(
+            "/app/meshes",
+            get(crate::meshes::saved_meshes).post(crate::meshes::remember_mesh),
+        )
+        .route("/app/local-meshes", get(crate::meshes::local_meshes))
         .route("/app/events", get(app_events))
         .route("/app/diagnose", post(app_diagnose))
         .route("/app/host", post(app_host))
@@ -53,12 +67,13 @@ async fn app_state(State(state): State<Arc<AppState>>) -> Json<Phase> {
 async fn app_events(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
+    let receiver = state.events.subscribe();
     let current = state.phase().await;
     let first = futures_util::stream::once(async move {
         Ok(Event::default()
             .data(serde_json::to_string(&crate::events::AppEvent::Phase(current)).unwrap()))
     });
-    let live = BroadcastStream::new(state.events.subscribe()).filter_map(|event| async move {
+    let live = BroadcastStream::new(receiver).filter_map(|event| async move {
         let event = event.ok()?;
         let data = serde_json::to_string(&event).ok()?;
         Some(Ok(Event::default().data(data)))
@@ -144,6 +159,9 @@ struct ChatRequest {
 /// One agent chat turn, streamed as SSE. The goose agent owns the
 /// conversation history; the body carries only the new user message.
 async fn app_chat(State(state): State<Arc<AppState>>, Json(req): Json<ChatRequest>) -> Response {
+    if let Some(compute) = &state.compute {
+        return crate::compute::chat(compute, &req.text).await;
+    }
     use crate::agent::{self, Frame};
     use goose::agents::SessionConfig;
     use goose::conversation::message::Message;
@@ -275,7 +293,10 @@ fn session_error(err: impl Into<crate::agent::SessionError>) -> Response {
 /// The persisted conversation, shaped for the chat UI to repaint on launch.
 /// Empty array when there's no ongoing chat (first run or just after reset).
 /// Independent of node state — reading history doesn't need a running mesh.
-async fn app_history() -> Response {
+async fn app_history(State(state): State<Arc<AppState>>) -> Response {
+    if let Some(compute) = &state.compute {
+        return crate::compute::history(compute).await;
+    }
     Json(crate::agent::history().await).into_response()
 }
 
@@ -309,7 +330,21 @@ async fn app_reset(State(state): State<Arc<AppState>>) -> Response {
 }
 
 async fn ready_for_launch(state: &Arc<AppState>) -> bool {
-    matches!(state.phase().await, Phase::Idle | Phase::Error { .. })
+    if state.compute.is_some() {
+        return false;
+    }
+    let mut phase = state.phase.write().await;
+    if !matches!(*phase, Phase::Idle | Phase::Error { .. }) {
+        return false;
+    }
+    *phase = Phase::Starting {
+        mode: crate::state::Mode::Join,
+        model: None,
+    };
+    let _ = state
+        .events
+        .send(crate::events::AppEvent::Phase(phase.clone()));
+    true
 }
 
 async fn busy_response(state: &Arc<AppState>) -> Response {

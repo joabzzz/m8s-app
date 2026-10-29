@@ -1,8 +1,8 @@
-import { Home, MessageSquare, Settings } from 'lucide-react'
+import { Home, MessageSquare, Settings, Server } from 'lucide-react'
 import MeshLogo from './MeshLogo'
 
 interface AppNavigationProps {
-  current: 'home' | 'chat'
+  current: 'home' | 'chat' | 'compute'
   connected: boolean
   meshName?: string
   isPublic?: boolean
@@ -25,20 +25,33 @@ export default function AppNavigation({
       className="flex h-12 shrink-0 items-center border-b border-edge bg-panel px-4"
       data-testid="app-navigation"
     >
-      <MeshLogo variant="mark" className="mr-6 w-[28px]" />
+      <button aria-label="Home" onClick={onHome}>
+        <MeshLogo variant="mark" className="mr-6 w-[28px]" />
+      </button>
       <nav className="flex h-full items-center gap-1" aria-label="Main navigation">
         <NavButton active={current === 'home'} onClick={onHome} icon={Home} testId="nav-home">
           Home
         </NavButton>
-        <NavButton
-          active={current === 'chat'}
-          onClick={onChat}
-          icon={MessageSquare}
-          testId="nav-chat"
-          disabled={!connected}
-        >
-          Chat
-        </NavButton>
+        {connected && (
+          <>
+            <NavButton
+              active={current === 'chat'}
+              onClick={onChat}
+              icon={MessageSquare}
+              testId="nav-chat"
+            >
+              Chat
+            </NavButton>
+            <NavButton
+              active={current === 'compute'}
+              onClick={() => window.dispatchEvent(new Event('m8s-open-compute'))}
+              icon={Server}
+              testId="nav-compute"
+            >
+              Compute
+            </NavButton>
+          </>
+        )}
       </nav>
       {connected && (
         <button

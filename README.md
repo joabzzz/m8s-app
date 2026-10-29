@@ -1,4 +1,29 @@
-# Mesh — a friendly desktop app for mesh-llm
+# m8s-app — experimental compute console
+
+Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
+Home is the landing page, with active local meshes and recent connections.
+Chat and Compute appear as top tabs only while attached to a mesh. A private mesh
+can start as a passive client without downloading a model; local model sharing is
+an explicit alternative. Recent private meshes retain their invite for reconnecting.
+
+The Compute tab shows discovered hardware, VRAM capacity, running models and node
+details. Add compute browses Vast offers with per-GPU model-size estimates,
+rechecks availability and budget, and attaches a bounded rental to the selected
+mesh through an app-owned signing bridge. Owned rentals have explicit removal
+and provider-confirmed cleanup. See [setup and limits](docs/M8S_DEMO.md) and the
+[current-mesh decision](docs/decisions/002-current-mesh-compute.md).
+
+The current runtime supports Qwen 3.8 27B on qualified Blackwell hardware. Booking
+is one attempt per explicitly reconciled plan; general repeat booking, multiple
+rentals and live GPU utilization remain unfinished. The older dedicated managed
+session is still available for reproducing the saved demo.
+
+Desktop builds are for local testing and demo capture. The native bundle is
+`m8s.app`, with a separate bundle identifier, `m8s://` link registration and
+`m8s-app` settings/Goose directory. Rust crate and executable names retain their
+upstream names for now. Shared Mesh model caches remain shared.
+
+## Upstream desktop experience
 
 A macOS desktop app (proof of concept) that makes sovereign, peer-to-peer AI —
 powered by the open-source [mesh-llm](../mesh-llm) project — usable by complete
@@ -76,7 +101,7 @@ just test           # Rust unit tests
 just test-e2e       # mocked Playwright suite (fast)
 just test-e2e-real  # real end-to-end: real node, real model, real agent + tool use
 just check          # the full pre-PR gate (fmt-check + lint + test + test-e2e)
-just bundle         # package Mesh.app (ad-hoc signed)
+just bundle         # package m8s.app (ad-hoc signed)
 ```
 
 First real run downloads the tiny test model (Qwen3-0.6B, ~400MB) and the

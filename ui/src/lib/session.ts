@@ -11,7 +11,7 @@ import type { Visibility } from './types'
 
 /** The launch intent for each front-door flow, 1:1 with the appApi calls. */
 export type LaunchConfig =
-  | { kind: 'host'; model: string; visibility: Visibility }
+  | { kind: 'host'; model?: string; visibility: Visibility }
   | { kind: 'join'; token: string; share: boolean; model?: string }
   | { kind: 'public'; share: boolean; model?: string }
 

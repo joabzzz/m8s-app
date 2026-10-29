@@ -48,6 +48,10 @@ pub struct Ports {
 }
 
 pub struct AppState {
+    pub rentals: crate::rentals::Rentals,
+    pub attachment: std::sync::OnceLock<crate::attachment::Attachment>,
+    pub lifecycle: Mutex<()>,
+    pub compute: Option<Arc<crate::compute::Compute>>,
     pub phase: RwLock<Phase>,
     pub node: Mutex<Option<mesh_llm_sdk::MeshNode>>,
     /// Embedded goose agent, created lazily on the first chat turn.
@@ -66,12 +70,22 @@ impl AppState {
     pub fn new(ports: Ports) -> Arc<Self> {
         let (events, _) = broadcast::channel(512);
         Arc::new(Self {
+            rentals: crate::rentals::Rentals::default(),
+            attachment: std::sync::OnceLock::new(),
+            lifecycle: Mutex::new(()),
+            compute: crate::compute::Compute::from_env()
+                .expect("Invalid explicit m8s desktop configuration"),
             phase: RwLock::new(Phase::Idle),
             node: Mutex::new(None),
             agent: Mutex::new(None),
             events,
             ports,
-            http: reqwest::Client::new(),
+            http: reqwest::Client::builder()
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .connect_timeout(std::time::Duration::from_secs(3))
+                .build()
+                .expect("local HTTP client"),
             pending_invite: std::sync::Mutex::new(None),
         })
     }

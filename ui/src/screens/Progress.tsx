@@ -16,6 +16,7 @@ const SOVEREIGNTY_LINES = [
 ]
 
 interface ProgressProps {
+  passive?: boolean
   onCancel: () => void
   onErrorReset: () => void
 }
@@ -28,7 +29,7 @@ function formatEta(seconds: number): string {
   return `about ${Math.round(seconds / 3600)} h left`
 }
 
-export default function Progress({ onCancel, onErrorReset }: ProgressProps) {
+export default function Progress({ onCancel, onErrorReset, passive }: ProgressProps) {
   const { phase, download, downloadRate } = useApp()
   const [lineIdx, setLineIdx] = useState(0)
   const { bytesPerSec, etaSeconds } = downloadRate
@@ -64,16 +65,20 @@ export default function Progress({ onCancel, onErrorReset }: ProgressProps) {
     },
   ]
 
-  const heading = isRuntime
-    ? 'Preparing your Mac’s AI engine…'
-    : isDownloading
-      ? 'Downloading model…'
-      : 'Waking it up…'
-  const sub = isRuntime
-    ? 'A one-time download so models can run on this Mac.'
-    : isDownloading
-      ? 'This is the whole model — every word it knows — coming to live on your Mac.'
-      : 'Loading the model into your Mac’s AI memory — under a minute.'
+  const heading = passive
+    ? 'Connecting your mesh…'
+    : isRuntime
+      ? 'Preparing your Mac’s AI engine…'
+      : isDownloading
+        ? 'Downloading model…'
+        : 'Waking it up…'
+  const sub = passive
+    ? 'Connecting this Mac as a passive client. No model download needed.'
+    : isRuntime
+      ? 'A one-time download so models can run on this Mac.'
+      : isDownloading
+        ? 'This is the whole model — every word it knows — coming to live on your Mac.'
+        : 'Loading the model into your Mac’s AI memory — under a minute.'
 
   const activeDownload =
     download &&
@@ -104,7 +109,7 @@ export default function Progress({ onCancel, onErrorReset }: ProgressProps) {
 
       {/* stage checklist */}
       <div className="flex flex-col gap-2 font-mono text-[14px]" data-testid="progress-stages">
-        {stages.map((stage) => (
+        {(passive ? [] : stages).map((stage) => (
           <div
             key={stage.id}
             data-testid={`stage-${stage.id}`}
@@ -153,7 +158,11 @@ export default function Progress({ onCancel, onErrorReset }: ProgressProps) {
       </div>
 
       <p className="max-w-md text-center text-[14px] text-ink-faint transition-opacity duration-700">
-        {SOVEREIGNTY_LINES[lineIdx]}
+        {passive
+          ? lineIdx > 0
+            ? 'Still connecting. Previous peers may be offline. You can return Home and try again later.'
+            : 'You can add an inference host after your mesh connects.'
+          : SOVEREIGNTY_LINES[lineIdx]}
       </p>
 
       <button

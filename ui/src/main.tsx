@@ -14,7 +14,7 @@ window.addEventListener(
   'contextmenu',
   (event) => {
     const target = event.target
-    if (!(target instanceof HTMLElement)) return
+    if (!(target instanceof Element)) return
     if (target.closest('input, textarea, [contenteditable="true"], [data-native-context-menu]'))
       return
     event.preventDefault()

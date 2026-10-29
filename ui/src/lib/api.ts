@@ -8,6 +8,20 @@ import type {
   Visibility,
 } from './types'
 
+export interface SavedMesh {
+  mesh_id?: string
+  name: string
+  config: import('./session').LaunchConfig
+}
+export interface LocalMesh {
+  pid: number
+  node_id: string
+  name: string
+  is_self: boolean
+  token: string | null
+  role: string
+}
+
 async function json<T>(resp: Response): Promise<T> {
   if (!resp.ok) {
     let detail: string
@@ -22,16 +36,31 @@ async function json<T>(resp: Response): Promise<T> {
 }
 
 export const appApi = {
-  state: () => fetch('/app/state').then((r) => json<Phase>(r)),
+  meshes: () =>
+    fetch('/app/meshes', { signal: AbortSignal.timeout(5000) }).then((r) => json<SavedMesh[]>(r)),
+  localMeshes: () =>
+    fetch('/app/local-meshes', { signal: AbortSignal.timeout(5000) }).then((r) =>
+      json<{ instances: LocalMesh[] }>(r),
+    ),
+  rememberMesh: (mesh: SavedMesh) =>
+    fetch('/app/meshes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(mesh),
+    }).then((r) => json(r)),
+  state: () =>
+    fetch('/app/state', { signal: AbortSignal.timeout(5000) }).then((r) => json<Phase>(r)),
   diagnose: () => fetch('/app/diagnose', { method: 'POST' }).then((r) => json<DiagnoseReport>(r)),
-  host: (model: string, visibility: Visibility, meshName?: string) =>
+  host: (model: string | undefined, visibility: Visibility, meshName?: string) =>
     fetch('/app/host', {
+      signal: AbortSignal.timeout(10000),
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ model, visibility, mesh_name: meshName ?? null }),
     }).then((r) => json<{ ok: boolean }>(r)),
   join: (token: string, share: boolean, model?: string, opts?: { public?: boolean }) =>
     fetch('/app/join', {
+      signal: AbortSignal.timeout(10000),
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -42,8 +71,14 @@ export const appApi = {
       }),
     }).then((r) => json<{ ok: boolean }>(r)),
   invite: () => fetch('/app/invite').then((r) => json<{ token: string; approx_bytes: number }>(r)),
-  shutdown: () => fetch('/app/shutdown', { method: 'POST' }).then((r) => json<{ ok: boolean }>(r)),
-  reset: () => fetch('/app/reset', { method: 'POST' }).then((r) => json<{ ok: boolean }>(r)),
+  shutdown: () =>
+    fetch('/app/shutdown', { method: 'POST', signal: AbortSignal.timeout(15000) }).then((r) =>
+      json<{ ok: boolean }>(r),
+    ),
+  reset: () =>
+    fetch('/app/reset', { method: 'POST', signal: AbortSignal.timeout(15000) }).then((r) =>
+      json<{ ok: boolean }>(r),
+    ),
   /** The persisted conversation, to repaint the ongoing chat on launch. */
   history: () => fetch('/app/history').then((r) => json<HistoryMessage[]>(r)),
   sessionHistory: (sessionId: string) =>
@@ -51,7 +86,10 @@ export const appApi = {
       json<HistoryMessage[]>(r),
     ),
   /** "New chat": forget the current session so the next turn starts fresh. */
-  newChat: () => fetch('/app/new_chat', { method: 'POST' }).then((r) => json<{ ok: boolean }>(r)),
+  newChat: () =>
+    fetch('/app/new_chat', { method: 'POST', signal: AbortSignal.timeout(15000) }).then((r) =>
+      json<{ ok: boolean }>(r),
+    ),
   /** One-shot read of an invite token delivered by a mesh:// deep link before
    *  the frontend was listening (e.g. the link launched the app). */
   pendingInvite: () => fetch('/app/pending_invite').then((r) => json<{ token: string | null }>(r)),
@@ -190,4 +228,17 @@ export function formatBytes(bytes: number): string {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
   if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`
   return `${Math.round(bytes / 1e3)} KB`
+}
+
+/** Display grouping only; invite metadata never grants control authority. */
+export function inviteMeshId(token: string | null | undefined): string | null {
+  if (!token || token.length > 16384 || !looksLikeInviteToken(token)) return null
+  try {
+    const parsed = JSON.parse(
+      atob(token.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (token.length % 4)) % 4)),
+    )
+    return typeof parsed.mesh_id === 'string' && parsed.mesh_id.length > 0 ? parsed.mesh_id : null
+  } catch {
+    return null
+  }
 }

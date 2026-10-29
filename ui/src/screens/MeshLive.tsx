@@ -18,7 +18,9 @@ export default function MeshLive({ token, model, isPrivate, onGoToChat }: MeshLi
       <div className="text-center">
         <h1 className="font-display text-[32px] font-bold tracking-tight">Your mesh is live.</h1>
         <p className="mt-2 text-[15px] text-ink-muted">
-          {model ?? 'Your model'} is running on this Mac. Now invite someone.
+          {model
+            ? `${model} is running on this Mac. Now invite someone.`
+            : 'This Mac is a passive client. Invite a host or add remote compute when you need inference.'}
         </p>
       </div>
 
@@ -52,7 +54,8 @@ export default function MeshLive({ token, model, isPrivate, onGoToChat }: MeshLi
       </div>
 
       <p className="text-[13px] text-ink-faint">
-        Anyone who joins can chat with your model. {isPrivate ? 'Invite-only.' : 'Open mesh.'}
+        Models shared by hosts will be available to this mesh.{' '}
+        {isPrivate ? 'Invite-only.' : 'Open mesh.'}
       </p>
     </div>
   )
