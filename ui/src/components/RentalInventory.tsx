@@ -90,7 +90,17 @@ export default function RentalInventory({
                 ? 'Removal requested — awaiting confirmation'
                 : rental.stage === 'cleanup_unconfirmed'
                   ? 'Attempt ended — cleanup confirmation pending'
-                  : 'Provisioning or running'}
+                  : rental.stage === 'mesh_canary_completed'
+                    ? 'Mesh inference verified'
+                    : rental.stage === 'verifying_inference'
+                      ? 'Checking mesh inference'
+                      : rental.stage === 'model_download_error'
+                        ? 'Host reported a model download error'
+                        : rental.stage === 'preparing_model'
+                          ? 'Host authenticated · preparing model'
+                          : rental.stage === 'provisioning_host'
+                            ? 'Configuring host'
+                            : 'Provisioning or running'}
           </p>
           <p className="mt-2 text-xs text-ink-muted">
             Mesh {rental.target.mesh_id} · bounded deadline{' '}

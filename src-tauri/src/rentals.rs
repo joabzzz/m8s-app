@@ -57,7 +57,7 @@ fn authorize(state: &AppState, headers: &HeaderMap) -> Result<(), StatusCode> {
     }
     Ok(())
 }
-fn private_read(path: &Path) -> anyhow::Result<Value> {
+fn private_bytes(path: &Path) -> anyhow::Result<Vec<u8>> {
     use std::io::Read;
     use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
     anyhow::ensure!(
@@ -80,7 +80,10 @@ fn private_read(path: &Path) -> anyhow::Result<Value> {
     let mut bytes = Vec::new();
     file.take(32769).read_to_end(&mut bytes)?;
     anyhow::ensure!(bytes.len() <= 32768, "Oversized file");
-    Ok(serde_json::from_slice(&bytes)?)
+    Ok(bytes)
+}
+fn private_read(path: &Path) -> anyhow::Result<Value> {
+    Ok(serde_json::from_slice(&private_bytes(path)?)?)
 }
 fn write_new(path: &Path, value: &Value) -> anyhow::Result<()> {
     use std::os::unix::fs::OpenOptionsExt;
@@ -361,6 +364,33 @@ pub async fn launch(
     });
     Ok(Json(json!({"accepted":true,"target":active})))
 }
+// Closed milestones only. Never forward native output, invites or provider errors.
+fn progress_stage(bytes: &[u8]) -> &'static str {
+    let Ok(log) = std::str::from_utf8(bytes) else {
+        return "provisioning_or_running";
+    };
+    let has = |stage: &str| {
+        log.lines()
+            .any(|line| line.strip_prefix("prototype stage: ") == Some(stage))
+    };
+    if has("owner-routed-inference-completed") {
+        "mesh_canary_completed"
+    } else if has("owner-routed-model-observed") {
+        "verifying_inference"
+    } else if log
+        .lines()
+        .any(|line| line == "prototype native category: native-download-error")
+    {
+        "model_download_error"
+    } else if has("certificate-delivered-control-established") {
+        "preparing_model"
+    } else if has("exact-instance-network-observed") {
+        "provisioning_host"
+    } else {
+        "provisioning_or_running"
+    }
+}
+
 pub async fn status() -> Json<Value> {
     let Ok((_, plan)) = config() else {
         return Json(json!({"configured":false,"rental":null}));
@@ -384,8 +414,11 @@ pub async fn status() -> Json<Value> {
         .zip(remote.as_ref())
         .is_some_and(|(receipt, node)| confirmed_removed(receipt, node, &plan));
     let finished = private_read(&control.join("desktop-exit.json")).is_ok();
+    let progress = private_bytes(&control.join("attached.log"))
+        .map(|bytes| progress_stage(&bytes))
+        .unwrap_or("provisioning_or_running");
     Json(
-        json!({"configured":true,"rental":{"target":intent["target"],"offer_id":intent["offer_id"],"node_id":remote.as_ref().and_then(|r|r["node_id"].as_str()),"instance_id":remote.as_ref().and_then(|r|r["instance_id"].as_u64()),"expires_at":intent["expires_at"],"stage":if removed{"removed"}else if finished {"cleanup_unconfirmed"}else if control.join("down-requested").exists(){"removal_requested"}else{"provisioning_or_running"}}}),
+        json!({"configured":true,"rental":{"target":intent["target"],"offer_id":intent["offer_id"],"node_id":remote.as_ref().and_then(|r|r["node_id"].as_str()),"instance_id":remote.as_ref().and_then(|r|r["instance_id"].as_u64()),"expires_at":intent["expires_at"],"stage":if removed{"removed"}else if finished {"cleanup_unconfirmed"}else if control.join("down-requested").exists(){"removal_requested"}else{progress}}}),
     )
 }
 pub async fn remove(
@@ -432,6 +465,29 @@ pub async fn request_cleanup(state: &AppState) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn progress_is_a_closed_projection_and_never_claims_remote_readiness() {
+        assert_eq!(
+            progress_stage(b"prototype native category: native-download-error\n"),
+            "model_download_error"
+        );
+        assert_eq!(
+            progress_stage(b"arbitrary native or provider text"),
+            "provisioning_or_running"
+        );
+        assert_eq!(
+            progress_stage(b"prototype stage: certificate-delivered-control-established\n"),
+            "preparing_model"
+        );
+        assert_eq!(
+            progress_stage(b"untrusted-prefix prototype stage: owner-routed-inference-completed"),
+            "provisioning_or_running"
+        );
+        assert_eq!(
+            progress_stage(b"prototype stage: owner-routed-inference-completed\n"),
+            "mesh_canary_completed"
+        );
+    }
     #[test]
     fn quote_counts_cleanup_transfer_and_contingency_in_hourly_admission() {
         let mut plan = json!({"policy":{"max_runtime_seconds":1200,"minimum_cleanup_seconds":240,"minimum_contingency":1000000,"valid_from":1,"valid_until":10000,"trial_all_in":6000000,"monthly_all_in":6000000,"instance_hourly":3500000,"total_hourly":3500000,"baseline":{"prior_lifetime_spent":0,"prior_current_period_spent":0}},"request":{"quote":{"runtime_seconds":1200,"cleanup_seconds":240,"contingency":1000000}}});
