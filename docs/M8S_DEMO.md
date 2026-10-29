@@ -99,3 +99,28 @@ It saves an uncut WebM, screenshots, a timeline and the two-turn conversation.
 The capture uses the actual desktop frontend and backend, without the native
 window frame. It requests down on failure and reports failure if removal cannot
 be confirmed; independently verify the provider inventories afterward.
+
+## Current-mesh rentals (experimental)
+
+New Compute bookings use the currently attached embedded node. Start the app with
+`M8S_CLI` pointing to an absolute, locally owned `m8s` executable built with
+`prototype-vast`, `M8S_VAST_CREDENTIAL_FILE` pointing to the explicitly selected
+private dotenv file, and `M8S_RENTAL_PLAN` pointing to a private bounded launch
+plan. The plan uses the controller's `m8s.vast-demo/v1` schema, Qwen 3.8 27B model,
+and a fresh private `control_directory`. Preserve cumulative budget liabilities;
+do not reuse consumed attempts. The app writes its attachment descriptor and
+immutable intent there. Never place these files in the repository.
+
+Create or join a mesh, then open Compute → Add compute. Browse hardware, inspect
+per-GPU memory and approximate model classes, review an instance, and request a
+fresh qualification. Confirm rental only after reviewing the budget and target.
+The current runtime qualification supports Qwen 27B on its pinned Blackwell image;
+browsing other hardware does not mean that runtime can launch on it.
+
+Owned rentals show removal requests separately from confirmed removal. Select a
+discovered node or use Inspect node on its rental to view reported GPU capacity,
+running/assigned/cached models and identity. Missing live utilization stays unknown.
+Leaving the mesh requests removal; independent provider cleanup still enforces the
+bounded deadline if the app exits. Keep the private controller state for recovery.
+The UI currently allows one attempt per reconciled plan, not automatic repeat
+booking. See ADR 002 for the architecture and qualification gaps.

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["src-tauri"]
+exclude = ["vendor/mesh-llm-identity"]
 
 # Mirrors mesh-llm's dev profile: GGUF startup hashes the source model with
 # sha2 before the native model open, so keep those crates near release speed

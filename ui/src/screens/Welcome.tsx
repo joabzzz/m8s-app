@@ -5,7 +5,13 @@ import MeshLogo from '../components/MeshLogo'
 import MeshMark from '../components/MeshMark'
 import MeshViz from '../components/MeshViz'
 import { Card, ReassuranceLine } from '../components/ui'
-import { appApi, type SavedMesh, type LocalMesh, looksLikeInviteToken } from '../lib/api'
+import {
+  appApi,
+  type SavedMesh,
+  type LocalMesh,
+  looksLikeInviteToken,
+  inviteMeshId,
+} from '../lib/api'
 import { lastConfigLabel, type LaunchConfig } from '../lib/session'
 
 interface WelcomeProps {
@@ -18,7 +24,7 @@ interface WelcomeProps {
   onJoin: (prefillToken?: string) => void
   onHost: () => void
   onOpenSettings: () => void
-  activeMesh?: { name: string; isPublic: boolean }
+  activeMesh?: { name: string; isPublic: boolean; token?: string | null }
   onReturnToChat?: () => void
 }
 
@@ -81,6 +87,23 @@ export default function Welcome({
     }
   }, [])
 
+  const seen = new Set<string>()
+  if (activeMesh?.isPublic) seen.add('public')
+  const activeId = inviteMeshId(activeMesh?.token)
+  if (activeId) seen.add(`mesh:${activeId}`)
+  const visibleRecent = recent.filter((row) => {
+    const id =
+      row.config.kind === 'public'
+        ? 'public'
+        : row.config.kind === 'join'
+          ? `mesh:${inviteMeshId(row.config.token) ?? row.config.token}`
+          : null
+    if (!id) return true
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+
   return (
     <div className="flex h-screen flex-col">
       <AppNavigation
@@ -139,7 +162,7 @@ export default function Welcome({
                     </button>
                   </div>
                 ))}
-              {recent.map((row, index) => (
+              {visibleRecent.map((row, index) => (
                 <button
                   key={index}
                   onClick={() => onReconnect(row.config)}

@@ -1,13 +1,14 @@
 import type { ComputeStatus } from './ComputeDemo'
-import { useState } from 'react'
-import { Activity, ArrowUpRight, Cloud, Cpu, Network, Server } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { Activity, Cpu, Network, Plus, Server } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { Button } from '../components/ui'
-
-type Section = 'Fleet' | 'Providers' | 'Inference'
+import { fleetNodes, fleetTotal, gb } from '../lib/fleet'
+import NodeDetails from '../components/NodeDetails'
+import ComputeOffers from '../components/ComputeOffers'
+import RentalInventory from '../components/RentalInventory'
 
 export default function Compute({
-  onMesh,
   onChat,
   onRental,
   rental,
@@ -17,211 +18,186 @@ export default function Compute({
   onRental?: () => void
   rental?: ComputeStatus | null
 }) {
-  const [section, setSection] = useState<Section>('Fleet')
   const { phase, status } = useApp()
+  const [ownedNode, setOwnedNode] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [selected, setSelected] = useState<string | null>(null)
+  const close = useCallback(() => setSelected(null), [])
   const observed = rental ? rental.node : status
-  const connected = rental ? rental.node !== null : phase.phase === 'running' && status !== null
-  const peers = observed?.peers ?? []
-  const role = rental
-    ? connected
-      ? 'Managed passive client'
-      : 'Managed client disconnected'
-    : phase.phase === 'running'
-      ? phase.serving
-        ? 'Inference host'
-        : 'Passive client'
-      : 'No active node'
-  const models = [...new Set(peers.flatMap((p) => p.serving_models ?? p.models ?? []))]
-  const speed = rental ? undefined : status?.tok_per_sec
+  const nodes = fleetNodes(
+    observed ? { ...observed, peers: observed.peers ?? [] } : null,
+    phase.phase === 'running' && phase.serving,
+  )
+  const memory = fleetTotal(nodes, 'memory')
+  const allocatable = fleetTotal(nodes, 'allocatable')
+  const models = [...new Set(nodes.flatMap((node) => node.running ?? []))]
+  const detail = nodes.find((node) => node.id === selected)
+  const name =
+    status?.mesh_name ?? (phase.phase === 'running' ? phase.mesh_name : null) ?? 'Current mesh'
+  const meshId = status?.mesh_id ?? ''
   return (
-    <div className="flex h-full bg-bg text-ink" data-testid="compute-screen">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-panel p-5">
-        <div className="mb-10 flex items-center gap-3">
-          <Cpu className="text-accent" size={24} />
-          <span className="font-display text-xl font-bold">
-            m8s<span className="text-ink-faint"> / compute</span>
-          </span>
-        </div>
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
-          Workspace
-        </p>
-        {(['Fleet', 'Providers', 'Inference'] as const).map((item) => {
-          const Icon = item === 'Fleet' ? Server : item === 'Providers' ? Cloud : Activity
-          return (
-            <button
-              key={item}
-              onClick={() => setSection(item)}
-              aria-current={section === item ? 'page' : undefined}
-              className={`mb-1 flex items-center gap-3 rounded-(--radius-control) px-3 py-3 text-sm ${section === item ? 'bg-inset text-accent' : 'text-ink-muted hover:text-ink'}`}
-            >
-              <Icon size={16} />
-              {item}
-            </button>
-          )
-        })}
-        <button
-          onClick={onRental ?? onMesh}
-          className="mt-auto flex items-center gap-3 rounded-(--radius-control) border border-edge p-3 text-left text-sm"
-        >
-          <Network size={16} />
-          <span>
-            {connected ? 'Manage mesh' : 'Connect a mesh'}
-            <span className="block text-xs text-ink-faint">
-              {connected ? 'Connection active' : 'Choose or create a network'}
-            </span>
-          </span>
-        </button>
-      </aside>
-      <main className="min-w-0 flex-1 overflow-auto p-8">
-        {onRental && (
-          <section className="mb-6 flex items-center justify-between rounded-(--radius-card) border border-accent/50 bg-panel p-5">
-            <div>
-              <p className="font-semibold">Managed rental session</p>
-              <p className="mt-1 text-sm text-ink-muted">Dedicated mesh · one bounded GPU lease</p>
-            </div>
-            <Button onClick={onRental}>Open rental session</Button>
-          </section>
-        )}
-        <header className="mb-9 flex items-center justify-between">
-          <div>
-            <p className="mb-2 text-xs text-ink-faint">Your infrastructure, together.</p>
-            <h1 className="font-display text-3xl font-bold tracking-tight">
-              {section === 'Fleet' ? 'Compute overview' : section}
-            </h1>
-          </div>
-          <Button variant="quiet" onClick={onRental ?? onMesh}>
-            {connected ? 'Manage mesh' : 'Connect mesh'}{' '}
-            <ArrowUpRight size={14} className="ml-2 inline" />
-          </Button>
-        </header>
-        <section
-          className="mb-6 flex flex-wrap items-center gap-5 rounded-(--radius-card) border border-edge bg-panel px-5 py-4"
-          aria-label="Local node identity"
-        >
-          <Network size={18} className="text-accent" />
-          <div>
-            <p className="text-sm font-semibold">{role}</p>
-            <p className="mt-1 max-w-md truncate font-mono text-xs text-ink-faint">
-              {observed?.node_id ?? 'Node identity unavailable'}
-            </p>
-          </div>
-          <div className="ml-auto text-right">
-            <p className="text-xs text-ink-muted">Rental authorization</p>
-            <p className="mt-1 text-xs text-warn">
-              {rental?.node ? 'Owner verified · dedicated mesh' : 'Owner attachment required'}
-            </p>
-          </div>
-        </section>
-        <div className="mb-9 grid grid-cols-3 gap-4">
-          {[
-            [
-              'Connected peers',
-              connected ? String(peers.length) : '—',
-              'Discovered in the active mesh',
-            ],
-            ['Serving models', connected ? String(models.length) : '—', 'Reported by remote peers'],
-            [
-              'Inference',
-              connected && speed != null && Number.isFinite(speed)
-                ? `${speed.toFixed(1)} tok/s`
-                : '—',
-              'Latest node-reported throughput',
-            ],
-          ].map(([label, value, detail]) => (
-            <div key={label} className="rounded-(--radius-card) border border-edge bg-panel p-5">
-              <p className="text-xs text-ink-muted">{label}</p>
-              <p className="my-3 font-display text-3xl font-semibold">{value}</p>
-              <p className="text-xs text-ink-faint">{detail}</p>
-            </div>
-          ))}
-        </div>
-        {section === 'Fleet' && (
+    <main className="h-full overflow-auto bg-bg p-8 text-ink" data-testid="compute-screen">
+      <div className="mx-auto max-w-6xl">
+        {adding ? (
+          <ComputeOffers
+            nodeId={observed?.node_id ?? ''}
+            meshId={meshId}
+            meshName={name}
+            onBack={() => setAdding(false)}
+          />
+        ) : (
           <>
+            <header className="mb-7 flex items-center justify-between">
+              <div>
+                <p className="mb-2 text-xs text-ink-faint">{name}</p>
+                <h1 className="font-display text-3xl font-bold">Compute overview</h1>
+              </div>
+              <Button onClick={() => setAdding(true)}>
+                <Plus size={16} className="mr-2 inline" />
+                Add compute
+              </Button>
+            </header>
+            <section
+              aria-label="Local node identity"
+              className="mb-6 flex items-center gap-4 rounded-(--radius-card) border border-edge bg-panel p-5"
+            >
+              <Network size={20} className="text-accent" />
+              <div>
+                <p className="text-sm font-semibold">
+                  {phase.phase === 'running' && phase.serving ? 'Inference host' : 'Passive client'}
+                </p>
+                <p className="mt-1 font-mono text-xs text-ink-faint">
+                  {observed?.node_id ?? 'Identity unavailable'}
+                </p>
+              </div>
+              <p className="ml-auto text-xs text-ink-muted">
+                {status?.owner?.verified ? 'Node owner verified' : 'Node owner not verified'}
+              </p>
+            </section>
+            <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {[
+                [
+                  'Nodes',
+                  String(nodes.length),
+                  `${nodes.filter((node) => node.role.toLowerCase() === 'host' || node.role.toLowerCase() === 'worker').length} hosts · includes this device`,
+                ],
+                [
+                  'GPU memory',
+                  gb(memory.value),
+                  `${memory.known} of ${memory.total} nodes reporting`,
+                ],
+                ['Allocatable capacity', gb(allocatable.value), 'Excludes configured reservations'],
+                ['Running models', String(models.length), 'Confirmed by node telemetry'],
+              ].map(([label, value, help]) => (
+                <section
+                  key={label}
+                  className="rounded-(--radius-card) border border-edge bg-panel p-5"
+                >
+                  <h2 className="text-xs text-ink-muted">{label}</h2>
+                  <p className="my-3 font-display text-2xl font-semibold">{value}</p>
+                  <p className="text-xs text-ink-faint">{help}</p>
+                </section>
+              ))}
+            </div>
+            {onRental && (
+              <section className="mb-6 flex items-center justify-between rounded-(--radius-card) border border-edge p-5">
+                <div>
+                  <h2 className="font-semibold">Owned rental</h2>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    Inspect lease, readiness, and exact-resource removal.
+                  </p>
+                </div>
+                <Button variant="quiet" onClick={onRental}>
+                  Open rental controls
+                </Button>
+              </section>
+            )}
+            <RentalInventory
+              onInspect={setSelected}
+              nodeIds={nodes.map((node) => node.id)}
+              onOwnedNode={setOwnedNode}
+            />
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold">Mesh hardware</h2>
-              <span className="text-xs text-ink-faint">
-                Peer observations · rental ownership not yet linked
-              </span>
+              <span className="text-xs text-ink-faint">Discovered nodes · select to inspect</span>
             </div>
-            {connected && peers.length > 0 ? (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {peers.map((peer, index) => (
-                  <article
-                    key={peer.id ?? peer.node_id ?? index}
-                    className="rounded-(--radius-card) border border-edge bg-panel p-5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Server className="text-accent" size={20} />
-                      <h3 className="font-semibold">{peer.hostname ?? `Peer ${index + 1}`}</h3>
-                      <span className="ml-auto text-xs text-ink-muted">
-                        {peer.role ?? 'Role unknown'}
-                      </span>
-                    </div>
-                    <p className="mt-5 text-sm text-ink-muted">
-                      {peer.vram_gb != null
-                        ? `${peer.vram_gb} GB reported memory`
-                        : 'Memory unavailable'}
-                    </p>
-                    <p className="mt-2 truncate text-xs text-ink-faint">
-                      {(peer.serving_models ?? peer.models ?? []).join(' · ') ||
-                        'No serving model reported'}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-(--radius-card) border border-dashed border-edge p-12 text-center">
-                <Server size={30} className="mx-auto mb-4 text-ink-faint" />
-                <h3 className="font-semibold">
-                  {connected ? 'Waiting for peers' : 'Bring your compute into view'}
-                </h3>
-                <p className="mx-auto mt-2 mb-6 max-w-sm text-sm text-ink-muted">
-                  {connected
-                    ? 'Your local node is connected. Invite another device to see its hardware and models here.'
-                    : 'Connect a mesh to see its hardware and models.'}{' '}
-                  Rental inventory will appear when the m8s controller is attached.
-                </p>
-                <Button onClick={onMesh}>{connected ? 'Manage mesh' : 'Choose a mesh'}</Button>
-              </div>
+            <p className="mb-5 text-xs text-ink-faint">
+              This is your node’s view of the mesh. Discovery does not imply a direct connection
+              between every pair of peers.
+            </p>
+            <section
+              aria-label="Mesh hardware map"
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            >
+              {nodes.map((node) => (
+                <button
+                  key={node.id}
+                  onClick={() => setSelected(node.id)}
+                  className={`rounded-(--radius-card) border bg-panel p-5 text-left transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-accent ${node.local ? 'border-accent/50' : 'border-edge'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    {node.local ? (
+                      <Cpu size={20} className="text-accent" />
+                    ) : (
+                      <Server size={20} className="text-accent" />
+                    )}
+                    <h3 className="truncate font-semibold">{node.name}</h3>
+                  </div>
+                  <p className="mt-2 text-xs text-ink-muted">
+                    {node.local ? 'This device · ' : ''}
+                    {node.role} · {node.state}
+                  </p>
+                  <p className="mt-5 text-sm">{gb(node.memory)} GPU memory</p>
+                  <p className="mt-2 truncate text-xs text-ink-faint">
+                    {node.gpus.map((gpu) => gpu.name).join(' · ') || 'GPU inventory not reported'}
+                  </p>
+                  <p className="mt-4 truncate text-xs text-ink-muted">
+                    {node.running === null
+                      ? 'Running models not reported'
+                      : node.running.length
+                        ? `${node.running.length} running · ${node.running.join(', ')}`
+                        : 'No running models'}
+                  </p>
+                </button>
+              ))}
+            </section>
+            {nodes.length === 1 && (
+              <p className="mt-5 text-sm text-ink-muted">
+                Your local node is connected. Add compute or invite another device to grow this
+                mesh.
+              </p>
             )}
+            <section className="mt-8 rounded-(--radius-card) border border-edge bg-panel p-5">
+              <div className="flex items-center gap-3">
+                <Activity size={20} className="text-accent" />
+                <h2 className="font-semibold">Inference</h2>
+                <Button className="ml-auto" variant="quiet" onClick={onChat}>
+                  Open inference chat
+                </Button>
+              </div>
+              <p className="mt-3 text-sm text-ink-muted">
+                {models.length
+                  ? `${models.length} running models reported across the mesh.`
+                  : 'No running models confirmed yet. Passive clients can stay connected while hosts prepare.'}
+              </p>
+            </section>
           </>
         )}
-        {section === 'Providers' && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {[
-              [
-                'Vast.ai',
-                'Live prototype qualified',
-                'Rental controls require the m8s controller integration.',
-              ],
-              ['Nebius', 'Planned adapter', 'Provider integration has not been implemented.'],
-            ].map(([name, state, detail]) => (
-              <article
-                key={name}
-                className="rounded-(--radius-card) border border-edge bg-panel p-6"
-              >
-                <Cloud size={24} className="mb-5 text-accent" />
-                <h2 className="text-lg font-semibold">{name}</h2>
-                <p className="mt-2 text-sm text-ink-muted">{state}</p>
-                <p className="mt-5 text-xs text-ink-faint">{detail}</p>
-              </article>
-            ))}
-          </div>
-        )}
-        {section === 'Inference' && (
-          <section className="rounded-(--radius-card) border border-edge bg-panel p-6">
-            <Activity size={24} className="mb-4 text-accent" />
-            <h2 className="text-lg font-semibold">Run a conversation on your mesh</h2>
-            <p className="mt-2 mb-6 text-sm text-ink-muted">
-              Use the existing agent chat to exercise available inference. GPU utilization and
-              per-rental performance require remote telemetry.
-            </p>
-            <Button onClick={onRental ?? onChat} disabled={!connected}>
-              Open inference chat
-            </Button>
-          </section>
-        )}
-      </main>
-    </div>
+      </div>
+      {detail && (
+        <NodeDetails
+          node={detail}
+          onClose={close}
+          onRemove={
+            detail.id === ownedNode
+              ? () => {
+                  close()
+                  document.getElementById('owned-rentals')?.scrollIntoView({ behavior: 'smooth' })
+                }
+              : undefined
+          }
+        />
+      )}
+    </main>
   )
 }

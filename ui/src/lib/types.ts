@@ -74,7 +74,22 @@ export interface DiagnoseReport {
 
 // ---- node management API (subset of StatusPayload we render) ----
 
+export interface GpuInfo {
+  name: string
+  vram_bytes: number
+  reserved_bytes?: number
+  allocatable_vram_bytes?: number
+}
 export interface PeerInfo {
+  gpus?: GpuInfo[]
+  state?: string
+  available_models?: string[]
+  hosted_models_known?: boolean
+  latency_source?: string
+  latency_age_ms?: number
+  version?: string
+  owner?: { owner_id?: string; cert_id?: string; verified: boolean }
+
   id?: string
   node_id?: string
   hostname?: string
@@ -89,6 +104,16 @@ export interface PeerInfo {
 }
 
 export interface StatusPayload {
+  owner?: { owner_id?: string; cert_id?: string; verified: boolean }
+  mesh_name?: string
+  mesh_id?: string
+  gpus?: GpuInfo[]
+  is_client?: boolean
+  is_host?: boolean
+  hosted_models?: string[]
+  available_models?: string[]
+  inflight_requests?: number
+
   node_id?: string
   node_state?: string
   model_name?: string | null

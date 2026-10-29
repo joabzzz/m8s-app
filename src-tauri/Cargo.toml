@@ -19,6 +19,9 @@ path = "src/bin/mesh-consoled.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Canonical MP-001 exact signer; retained locally until upstream exposes it.
+m8s-owner-identity = { package = "mesh-llm-identity", path = "../vendor/mesh-llm-identity", features = ["host-io"] }
+hex = "0.4"
 # mesh-llm crates come from the upstream repo, pinned by Cargo.lock; bump with
 # `cargo update -p mesh-llm-sdk` (etc.) to track main.
 mesh-llm-sdk = { git = "https://github.com/Mesh-LLM/mesh-llm", features = ["serving"] }

@@ -228,3 +228,16 @@ export function formatBytes(bytes: number): string {
   if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`
   return `${Math.round(bytes / 1e3)} KB`
 }
+
+/** Display grouping only; invite metadata never grants control authority. */
+export function inviteMeshId(token: string | null | undefined): string | null {
+  if (!token || token.length > 16384 || !looksLikeInviteToken(token)) return null
+  try {
+    const parsed = JSON.parse(
+      atob(token.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (token.length % 4)) % 4)),
+    )
+    return typeof parsed.mesh_id === 'string' && parsed.mesh_id.length > 0 ? parsed.mesh_id : null
+  } catch {
+    return null
+  }
+}

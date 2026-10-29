@@ -3,12 +3,15 @@
 #![recursion_limit = "256"]
 
 pub mod agent;
+pub mod attachment;
+pub mod catalog;
 pub mod compute;
 pub mod diagnose;
 pub mod events;
 pub mod meshes;
 pub mod node;
 pub mod proxy;
+pub mod rentals;
 pub mod server;
 pub mod state;
 

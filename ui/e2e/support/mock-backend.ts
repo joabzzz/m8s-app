@@ -356,6 +356,7 @@ export async function installMockBackend(page: Page, options: MockOptions = {}) 
         emitApp({ type: 'phase', phase: 'idle' })
         return json({ ok: true })
       }
+      if (path === '/app/rentals') return json({ configured: false, rental: null })
       if (path === '/api/status') return json(STATUS)
       if (path === '/api/models') return json({ mesh_models: [] })
       if (path === '/v1/models')

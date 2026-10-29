@@ -292,6 +292,7 @@ export default function App() {
             running.mesh_name ??
             (running.visibility === 'public' ? 'Global mesh' : 'Your private mesh'),
           isPublic: running.visibility === 'public',
+          token: running.invite_token,
         }
       : undefined
   const destinationLabel = pendingSwitch

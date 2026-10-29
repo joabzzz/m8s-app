@@ -6,11 +6,17 @@ Chat and Compute appear as top tabs only while attached to a mesh. A private mes
 can start as a passive client without downloading a model; local model sharing is
 an explicit alternative. Recent private meshes retain their invite for reconnecting.
 
-The Compute tab observes peers and node role. An opt-in [managed rental session](docs/M8S_DEMO.md)
-connects to one m8sd attempt, verifies its dedicated local owner, and exposes
-Add compute, pinned inference and confirmed removal. Attaching rentals to an
-arbitrary existing mesh, offer browsing and multiple rentals remain under development.
-See [the decision record](docs/decisions/001-compute-console.md).
+The Compute tab shows discovered hardware, VRAM capacity, running models and node
+details. Add compute browses Vast offers with per-GPU model-size estimates,
+rechecks availability and budget, and attaches a bounded rental to the selected
+mesh through an app-owned signing bridge. Owned rentals have explicit removal
+and provider-confirmed cleanup. See [setup and limits](docs/M8S_DEMO.md) and the
+[current-mesh decision](docs/decisions/002-current-mesh-compute.md).
+
+The current runtime supports Qwen 3.8 27B on qualified Blackwell hardware. Booking
+is one attempt per explicitly reconciled plan; general repeat booking, multiple
+rentals and live GPU utilization remain unfinished. The older dedicated managed
+session is still available for reproducing the saved demo.
 
 Desktop builds are for local testing and demo capture. The native bundle is
 `m8s.app`, with a separate bundle identifier, `m8s://` link registration and

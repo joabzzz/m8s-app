@@ -92,6 +92,13 @@ async fn run_host(state: &Arc<AppState>, req: HostRequest) -> Result<()> {
         builder = builder.publish(true);
     }
 
+    if state.attachment.get().is_none() {
+        let owner = crate::attachment::Attachment::open()?;
+        let _ = state.attachment.set(owner);
+    }
+    let builder = builder
+        .owner_key(&state.attachment.get().expect("initialized owner").key_path)
+        .owner_required(true);
     let node = builder.start().await.context("starting mesh node")?;
     let invite_token = node.invite_token().map(str::to_owned);
     *state.node.lock().await = Some(node);
@@ -157,6 +164,13 @@ async fn run_join(state: &Arc<AppState>, mut req: JoinRequest) -> Result<()> {
         builder = builder.model(model);
     }
 
+    if state.attachment.get().is_none() {
+        let owner = crate::attachment::Attachment::open()?;
+        let _ = state.attachment.set(owner);
+    }
+    let builder = builder
+        .owner_key(&state.attachment.get().expect("initialized owner").key_path)
+        .owner_required(true);
     let node = builder.start().await.context("joining mesh")?;
     let invite_token = node.invite_token().map(str::to_owned);
     *state.node.lock().await = Some(node);
@@ -187,7 +201,11 @@ pub async fn shutdown(state: &Arc<AppState>) -> Result<()> {
     if let Some(compute) = &state.compute {
         return compute.request_down().await;
     }
+    crate::rentals::request_cleanup(state).await?;
     let _operation = state.lifecycle.lock().await;
+    if let Some(owner) = state.attachment.get() {
+        owner.revoke().await;
+    }
     // Agent first: cancel any in-flight reply and drop the handle before its
     // provider's node goes away. This does NOT reset the conversation — the
     // session pointer persists, so the next launch resumes the same chat.
