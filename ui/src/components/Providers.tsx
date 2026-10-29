@@ -115,11 +115,7 @@ export default function Providers({
   }
   const showForm = editing || (forceOpen && !connection?.configured)
   return (
-    <section
-      id="compute-providers"
-      aria-label="Compute providers"
-      className="mb-7 rounded-(--radius-card) border border-edge bg-panel p-5"
-    >
+    <section id="compute-providers" aria-label="Compute providers" className="mb-5 max-w-3xl">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold">Providers</h2>
         {!connection && (
@@ -138,11 +134,11 @@ export default function Providers({
           {notice}
         </p>
       )}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-(--radius-control) border border-edge bg-inset p-4">
+      <div className="divide-y divide-edge rounded-(--radius-control) border border-edge">
+        <div className="bg-panel p-4">
           <div className="flex items-center gap-3">
             <div className="rounded bg-[#111] px-3 py-2">
-              <img src="/providers/vast.svg" alt="Vast.ai" className="h-6 w-auto" />
+              <img src="/providers/vast.svg" alt="Vast.ai" className="h-5 w-auto" />
             </div>
             <span className="ml-auto flex items-center gap-1 text-xs text-ink-muted">
               {connection?.configured ? (
@@ -185,7 +181,7 @@ export default function Providers({
             </Button>
           )}
         </div>
-        <div className="rounded-(--radius-control) border border-edge bg-inset p-4">
+        <div className="bg-panel p-4">
           <div className="flex items-center gap-3">
             <Cloud size={24} />
             <h3 className="font-semibold">Nebius</h3>
@@ -193,7 +189,7 @@ export default function Providers({
               Coming soon
             </span>
           </div>
-          <p className="mt-4 text-sm text-ink-muted">
+          <p className="mt-2 text-xs text-ink-muted">
             Provider setup and GPU rentals are planned. No credentials needed yet.
           </p>
         </div>

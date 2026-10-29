@@ -2,7 +2,10 @@
 
 Status: implemented; 2026-10-29. Keeps ADR 002's bounded managed-rental lifecycle.
 
-Compute contains provider cards and the credential flow. Settings exposes the same
+Compute keeps provider configuration in a secondary Providers subtab. Fleet is
+the default: compact hardware cards open a detail drawer with specs, reported
+capacity, model inventory and telemetry availability. Inference chat remains in
+the top-level Chat view. Add compute opens provider setup when disconnected. Settings exposes the same
 flow while detached from a mesh. Vast is supported; Nebius is explicitly coming
 soon and accepts no credentials. The Vast logo is an unmodified official asset
 from its press kit, displayed on a dark background.

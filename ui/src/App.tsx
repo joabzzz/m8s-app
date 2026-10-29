@@ -365,8 +365,6 @@ export default function App() {
             <Compute
               rental={rental}
               onRental={rental ? () => setView({ name: 'rental-demo' }) : undefined}
-              onMesh={() => setView({ name: 'welcome' })}
-              onChat={() => setView({ name: 'main' })}
             />
           </div>
         </div>
