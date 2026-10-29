@@ -20,12 +20,14 @@ local files; no rental is created during setup. Nebius is coming soon.
 
 The Compute tab shows discovered hardware, VRAM capacity, running models and node
 details. Add compute browses Vast offers with per-GPU model-size estimates,
-rechecks availability and budget, and attaches a bounded rental to the selected
-mesh through an app-owned signing bridge. Owned rentals have explicit removal
-and provider-confirmed cleanup. See [setup and limits](docs/M8S_DEMO.md) and the
+rechecks availability and budget, and provides experimental selected-mesh
+provisioning through either the app-owned signing bridge or the opt-in token
+plugin. Selected-mesh end-to-end acceptance is still pending. Owned rentals
+have explicit removal and provider-confirmed cleanup. See [setup and limits](docs/M8S_DEMO.md) and the
 [current-mesh decision](docs/decisions/002-current-mesh-compute.md).
 
-The current runtime supports Qwen 3.8 27B on qualified Blackwell hardware. Booking
+The saved legacy dedicated-mesh demo served Qwen 3.8 27B on Blackwell hardware;
+the matching stock-main worker product remains unqualified. Booking
 is one attempt per explicitly reconciled plan; general repeat booking, multiple
 rentals and live GPU utilization remain unfinished. The older dedicated managed
 session is still available for reproducing the saved demo.
