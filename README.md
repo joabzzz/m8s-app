@@ -1,6 +1,6 @@
 # m8s-app — experimental compute console
 
-[![Real Qwen 27B app conversation on rented stock-Mesh compute](docs/assets/v0-cover.png)](docs/assets/qwen27-demo.mp4)
+<a href="docs/assets/qwen27-demo.mp4"><img src="docs/assets/qwen27-demo.gif" width="640" alt="Live demo: book a GPU, inspect the mesh, chat with Qwen 27B, and release compute"></a>
 
 [Watch the one-minute demo](docs/assets/qwen27-demo.mp4) · [30-second GIF](docs/assets/qwen27-demo.gif) · [Acceptance evidence](docs/V0_ACCEPTANCE.md)
 
