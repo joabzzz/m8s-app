@@ -1,5 +1,24 @@
 # Agent notes — m8s-app
 
+## Current standing funding authorization (supersedes earlier session caps)
+
+The user authorizes using the existing funded Vast account credit until it is
+exhausted to finish m8s v0 verification and the app demo. The provider's current
+available credit is the funding limit; the old $6 session cap and requests for
+another $6 are superseded. Do not ask again for per-attempt funding while an
+attempt fits the remaining funded credit. No top-ups, new payment methods or
+spending beyond that credit are authorized. The selected credential file remains
+the workspace `.env` (VAST_API_KEY); never print its value.
+
+Before each paid attempt, observe fresh credit/prices and complete empty instance
+and volume inventories. Run at most one rental, bound its full liability within
+available funded credit, and arm automatic exact-resource cleanup before CREATE.
+Keep historical claims and accounting evidence. Distinguish old conservative
+reservations from settled charges already deducted from provider credit: do not
+subtract the same charge twice or treat the obsolete session cap as authority.
+Reconcile genuine outstanding/unbilled liabilities conservatively. A per-attempt
+implementation ceiling is a safety bound, not a new permission requirement.
+
 Read `DESIGN.md` first: architecture, verified library facts, gotchas, roadmap.
 `README.md` is the human intro; `DEMO.md` is a walkthrough script.
 

@@ -18,6 +18,12 @@ pub async fn offers(State(state): State<Arc<AppState>>) -> Response {
         )
             .into_response();
     }
+    if crate::plugin_compute::configured() {
+        return match crate::plugin_compute::call(json!({"operation":"offers"})).await {
+            Ok(value) => Json(value).into_response(),
+            Err(_) => unavailable(),
+        };
+    }
     let (Some(cli), Some(credential)) = (
         crate::providers::controller().map(|p| p.into_os_string()),
         crate::providers::credential()

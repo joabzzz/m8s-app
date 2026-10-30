@@ -64,3 +64,10 @@ controller or rental-plan environment variables retained the saved connection an
 historical profile and loaded 70 offers. No rental or provider mutation was
 performed. This validates onboarding and discovery, not the unresolved current-mesh
 inference canary documented in ADR 002.
+
+In plugin mode, configuration presence comes from the selected plugin plan.
+A failed or malformed status read returns a retryable service error; it is not
+projected as `configured: false`. This distinction prevents a transient controller
+error from routing Add compute back to setup. The plugin's read-only observations
+remain available while mutations hold their exclusive lock. Regression coverage
+includes lock contention and a failed UI status read followed by a successful retry.

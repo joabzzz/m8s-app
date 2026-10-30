@@ -10,11 +10,13 @@ pub mod diagnose;
 pub mod events;
 pub mod meshes;
 pub mod node;
+pub mod plugin_compute;
 pub mod providers;
 pub mod proxy;
 pub mod rentals;
 pub mod server;
 pub mod state;
+pub mod stock_node;
 
 /// Process-wide defaults shared by the desktop shell and the headless daemon.
 /// Call before spawning any threads.

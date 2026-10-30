@@ -1,7 +1,14 @@
 # Bounded Qwen 27B desktop demo
 
-The adapter is ported from the earlier desktop demo. This fork has not yet
-completed a live GPU run; synthetic screenshots are not live evidence.
+The current token-only selected-mesh flow completed a real stock-main GPU run,
+two app chat turns and independently confirmed destruction. See
+[V0_ACCEPTANCE.md](V0_ACCEPTANCE.md) for pins, evidence, limits and reviewed media.
+Use the stock-main/plugin instructions later in this document for that flow.
+
+## Legacy dedicated certified adapter
+
+The following dedicated-session instructions describe the earlier private-fork
+adapter, not the new selected-mesh recording.
 
 This branch adds an opt-in **Private GPU demo** screen to the Tauri app. It uses
 m8s's certified, model-free owner client, the existing Chat renderer and the live
@@ -146,3 +153,93 @@ in addition to node inspection and removal. The current managed runtime has no
 interactive SSH or pause/resume. Its provisioning key cannot open a shell. Use
 Remove compute to release the rental and wait for provider-confirmed removal.
 See [ADR 003](decisions/003-provider-onboarding.md) for custody and lifecycle details.
+
+## Current-mesh showcase recording
+
+The compact Fleet UI uses a separate live recorder:
+
+```sh
+node scripts/record-fleet.mjs --live /absolute/new-private-output --url http://127.0.0.1:4640
+node scripts/edit-fleet.mjs /absolute/new-private-output
+```
+
+Use `--url` to select an isolated backend on another local port without replacing
+a running desktop session. It accepts only a plain HTTP loopback origin.
+
+The app must already have a passive private mesh (owner-verified for certified
+mode), no remote peers, and
+an unused, explicitly reconciled rental plan. The recorder browses actual offers,
+checks a fresh quote (at most USD6), confirms once, waits for the controller's
+real inference canary, inspects hardware, asks two questions in Chat, and requests
+removal. It never installs mock responses. Independent controller cleanup remains
+armed if capture fails. `M8S_RECORD_SKIP_OFFERS` can exclude comma-separated stale
+offer IDs from selection; it never bypasses fresh qualification.
+
+The editor refuses unsuccessful captures. It produces a 67-second MP4 and a
+30-second GIF, shortening waits and retaining readable answers, with explicit
+editorial title cards and a live-recording disclosure. Keep the uncut WebM and
+private attempt/accounting evidence locally; publish only reviewed media and
+sanitized receipts. A failed run must not replace the existing successful demo.
+
+Recording exposed a remaining status issue: a controller failure during final
+preflight, before budget reservation or CREATE, currently appears as cleanup
+pending. Preserve its immutable attempt, verify the failure boundary and fresh
+empty provider inventories, then select a separately reconciled plan. Do not
+reset the old intent or fabricate a provider-removal receipt for a nonexistent
+instance. A dedicated pre-CREATE failure projection remains follow-up work.
+
+## Stock-Mesh v0 adapter (pinned live workflow verified)
+
+Set `M8S_PLUGIN` to the absolute, owned `m8s-plugin` executable and inherit
+`M8S_CLI` plus `M8S_V0_PLAN` when launching the app. The plan and target files
+must be private and explicitly select `token-only-provider-trusted` admission.
+See the plugin repository's `docs/V0_TOKEN_JOIN.md` for the plan and worker
+requirements. The selected node/mesh must match the app's current attachment.
+
+Offers, quotes, launch, status and removal then use the same `m8s.operator/v0`
+implementation as Mesh's plugin tool. Provider credentials come from the selected
+private plan. The Providers tab reads configuration presence through the plugin,
+labels it as externally managed and offers Refresh status; it does not present
+unsupported key-edit or disconnect controls. Configuration presence is not a live
+API-key verification. Missing or unsafe credential files do not enable browsing.
+The Providers tab cannot replace credentials in this mode. A failed plugin
+operation does not fall back to the historical launcher.
+
+Token-only admission does not verify an owner-issued worker certificate. The
+provider can inspect the worker's join token and inference data. The current app
+still embeds upstream `b4b33ef8`; this adapter alone does not prove compatibility
+with the latest main runtime. The README architecture cover is a preview, and
+no new live demo has passed the stock-Mesh acceptance gates yet.
+
+The recorder recognizes token-mode readiness separately and records its admission
+mode. The editor labels token-mode footage explicitly; this tooling has syntax
+checks, but no successful stock-v0 capture yet.
+
+
+### Stock-main local node for v0
+
+Set `M8S_STOCK_MESH=/absolute/stock-main/mesh-llm` together with the plugin and
+plan environment above. Use the qualified main revision
+`2809443345ea8134db62a8b433f5bb2bb5f1d123` (0.78.0). The app owns a passive
+stock Mesh child process with its device owner key; its Chat and Compute routes
+use that child's ports. This avoids the older embedded runtime's owner-control
+relay collision and a native SQLite dependency conflict between current Mesh
+and Goose. The normal embedded mode is unchanged.
+
+In this explicit profile, create a private mesh without a local model, or join
+by private invite as a passive client. Public discovery/local model serving are
+not supported in the stock-child profile. Session files/logs stay private under
+the app's compute-owner directory. Leaving the mesh requests rental cleanup
+before stopping the local node. This mode still needs remote inference
+qualification; it is not a completed demo.
+
+
+The local process check is reproducible without provider credentials or rentals:
+
+```sh
+node scripts/check-stock-node.mjs /absolute/stock-mesh /absolute/m8s-plugin /absolute/m8s /absolute/mesh-consoled /absolute/NEW-private-output
+```
+
+It checks verified local ownership, app/plugin status, mutual peer discovery,
+absence of the duplicate-relay error, and shutdown of the app-owned stock node.
+This is local admission/lifecycle evidence, not GPU or remote-network proof.

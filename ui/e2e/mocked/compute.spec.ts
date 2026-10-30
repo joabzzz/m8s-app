@@ -398,3 +398,38 @@ test('Home groups rotated invites by mesh identity without merging equal names',
   await page.goto('/')
   await expect(page.getByTestId('recent-mesh')).toHaveCount(2)
 })
+
+test('token-only readiness is labeled and failed polling retains removal controls', async ({
+  page,
+}) => {
+  await installMockBackend(page, { startRunning: true })
+  await page.addInitScript(() => {
+    const original = window.fetch
+    let polls = 0
+    window.fetch = async (input, init) => {
+      if (String(input) === '/app/rentals') {
+        if (++polls > 1) return Response.json({ error: 'unavailable', rental: null })
+        return Response.json({
+          configured: true,
+          admission: 'token-only-provider-trusted',
+          rental: {
+            offer_id: 7,
+            instance_id: 123,
+            target: { mesh_id: 'mesh-a', node_id: 'local' },
+            expires_at: Date.now() / 1000 + 1200,
+            stage: 'token_inference_verified',
+            certificate_verified: false,
+          },
+        })
+      }
+      return original(input, init)
+    }
+  })
+  await page.goto('/')
+  await page.getByTestId('nav-compute').click()
+  const rental = page.getByRole('region', { name: 'Owned rentals' })
+  await expect(rental).toContainText('Token-only mesh inference verified · not owner-certified')
+  await expect(rental).toContainText('Rental status unavailable', { timeout: 10000 })
+  await expect(rental.getByRole('button', { name: 'Remove compute', exact: true })).toBeVisible()
+  await expect(rental).not.toContainText('Removal confirmed')
+})

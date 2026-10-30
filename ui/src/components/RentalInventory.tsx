@@ -8,6 +8,40 @@ interface Rental {
   target: { mesh_id: string; node_id: string }
   expires_at: number
   stage: string
+  worker_status?: {
+    phase: string
+    cache_file_bytes?: number
+    network_received_bytes?: number
+    requested_model_count?: number
+    hosted_model_count?: number
+    runtime_error_count?: number
+    download_restart_count?: number
+    node_loading?: boolean
+    runtime_snapshot_truncated?: boolean
+    worker_running?: boolean
+  } | null
+}
+function workerPhase(phase: string) {
+  return (
+    {
+      awaiting_join: 'Waiting for provisioning',
+      unknown: 'Worker status unknown',
+      starting: 'Worker starting',
+      waiting_for_mesh: 'Waiting for mesh attachment',
+      joined: 'Worker reports mesh attachment',
+      stopped: 'Worker stopped',
+    }[phase] ?? 'Worker status unknown'
+  )
+}
+function count(value: number | undefined) {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 256
+    ? value
+    : undefined
+}
+function observedGb(bytes: number | undefined) {
+  return typeof bytes === 'number' && Number.isFinite(bytes) && bytes >= 0
+    ? `${(bytes / 1_000_000_000).toFixed(1)} GB`
+    : 'Unavailable'
 }
 export default function RentalInventory({
   onInspect,
@@ -33,6 +67,7 @@ export default function RentalInventory({
         })
         if (!response.ok) throw new Error()
         const value = await response.json()
+        if (value.error) throw new Error()
         if (!controller.signal.aborted) {
           setRental(value.rental)
           onOwnedNode(value.rental?.node_id ?? null)
@@ -89,22 +124,57 @@ export default function RentalInventory({
             {rental.instance_id ? `instance ${rental.instance_id}` : `offer ${rental.offer_id}`} ·{' '}
             {rental.stage === 'removed'
               ? 'Removal confirmed'
-              : rental.stage === 'removal_requested'
-                ? 'Removal requested — awaiting confirmation'
-                : rental.stage === 'cleanup_unconfirmed'
-                  ? 'Attempt ended — cleanup confirmation pending'
-                  : rental.stage === 'mesh_canary_completed'
-                    ? 'Mesh inference verified'
-                    : rental.stage === 'verifying_inference'
-                      ? 'Checking mesh inference'
-                      : rental.stage === 'model_download_error'
-                        ? 'Host reported a model download error'
-                        : rental.stage === 'preparing_model'
-                          ? 'Host authenticated · preparing model'
-                          : rental.stage === 'provisioning_host'
-                            ? 'Configuring host'
-                            : 'Provisioning or running'}
+              : rental.stage === 'token_inference_verified'
+                ? 'Token-only mesh inference verified · not owner-certified'
+                : rental.stage === 'token_provisioning'
+                  ? 'Stock Mesh provisioning · token-only admission'
+                  : rental.stage === 'removal_requested'
+                    ? 'Removal requested — awaiting confirmation'
+                    : rental.stage === 'cleanup_unconfirmed'
+                      ? 'Attempt ended — cleanup confirmation pending'
+                      : rental.stage === 'mesh_canary_completed'
+                        ? 'Mesh inference verified'
+                        : rental.stage === 'verifying_inference'
+                          ? 'Checking mesh inference'
+                          : rental.stage === 'model_download_error'
+                            ? 'Host reported a model download error'
+                            : rental.stage === 'preparing_model'
+                              ? 'Host authenticated · preparing model'
+                              : rental.stage === 'provisioning_host'
+                                ? 'Configuring host'
+                                : 'Provisioning or running'}
           </p>
+          {rental.stage === 'token_provisioning' && rental.worker_status && (
+            <div className="mt-3 text-xs text-ink-muted" aria-label="Worker startup observation">
+              <p>{workerPhase(rental.worker_status.phase)} · inference not yet verified</p>
+              <p className="mt-1">
+                Model cache size: {observedGb(rental.worker_status.cache_file_bytes)} · Network
+                received: {observedGb(rental.worker_status.network_received_bytes)}
+              </p>
+              {count(rental.worker_status.requested_model_count) !== undefined && (
+                <p className="mt-1">
+                  Models requested: {count(rental.worker_status.requested_model_count)} · Hosted:{' '}
+                  {count(rental.worker_status.hosted_model_count) ?? 'Unknown'}
+                  {rental.worker_status.node_loading === true ? ' · Loading' : ''}
+                  {rental.worker_status.runtime_snapshot_truncated === true
+                    ? ' · Partial snapshot'
+                    : ''}
+                </p>
+              )}
+              {(count(rental.worker_status.download_restart_count) ?? 0) > 0 && (
+                <p className="mt-1">Model download recovery attempted once. Original rental deadline applies.</p>
+              )}
+              {(count(rental.worker_status.runtime_error_count) ?? 0) > 0 && (
+                <p className="mt-1 text-warn" role="status">
+                  Worker reports {count(rental.worker_status.runtime_error_count)} runtime error(s).
+                  Inference is still unverified; Remove compute remains available.
+                </p>
+              )}
+              <p className="mt-1 text-ink-faint">
+                Worker-reported observations, not download completion.
+              </p>
+            </div>
+          )}
           <p className="mt-2 text-xs text-ink-muted">
             Mesh {rental.target.mesh_id} · bounded deadline{' '}
             {new Date(rental.expires_at * 1000).toLocaleTimeString()}
@@ -146,7 +216,8 @@ export default function RentalInventory({
               <h3 className="font-semibold">Managed rental access</h3>
               <p className="mt-2 text-ink-muted">
                 Use the Vast console for container logs and network details. This runtime’s SSH
-                login only accepts provisioning commands, so it cannot open an interactive terminal.
+                login only accepts provisioning and read-only status commands, so it cannot open an
+                interactive terminal.
               </p>
               <p className="mt-2 text-ink-muted">
                 Pause/resume is unavailable for this short-lived rental. Stopping the container

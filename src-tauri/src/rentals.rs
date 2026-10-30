@@ -214,6 +214,21 @@ pub async fn quote(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let fail = |message: &str| (StatusCode::CONFLICT, Json(json!({"error":message})));
     authorize(&state, &headers).map_err(|s| (s, Json(json!({"error":"Request refused"}))))?;
+    if crate::plugin_compute::configured() {
+        let _lifecycle = state.lifecycle.lock().await;
+        let current = crate::plugin_compute::selected_target(&state)
+            .await
+            .map_err(|_| fail("Plugin target unavailable or selected mesh changed."))?;
+        if current["node_id"] != req.node_id || current["mesh_id"] != req.mesh_id {
+            return Err(fail("Plugin is configured for a different mesh."));
+        }
+        return crate::plugin_compute::call(
+            json!({"operation":"quote","offer_id":req.offer_id,"machine_id":req.machine_id}),
+        )
+        .await
+        .map(Json)
+        .map_err(|_| fail("Plugin could not qualify this offer and budget."));
+    }
     let _action = state.rentals.action.lock().await;
     let (target, _) = attachment::target(&state).await.map_err(|_| {
         fail("The active node must have a verified app owner. Reconnect this mesh and retry.")
@@ -302,6 +317,16 @@ pub async fn launch(
     Json(req): Json<LaunchRequest>,
 ) -> Result<Json<Value>, StatusCode> {
     authorize(&state, &headers)?;
+    if crate::plugin_compute::configured() {
+        let _lifecycle = state.lifecycle.lock().await;
+        crate::plugin_compute::selected_target(&state)
+            .await
+            .map_err(|_| StatusCode::CONFLICT)?;
+        return crate::plugin_compute::call(json!({"operation":"launch","quote_id":req.quote_id}))
+            .await
+            .map(Json)
+            .map_err(|_| StatusCode::CONFLICT);
+    }
     let _action = state.rentals.action.lock().await;
     let _lifecycle = state.lifecycle.lock().await;
     let mut quote_guard = state.rentals.quote.lock().await;
@@ -395,6 +420,9 @@ fn progress_stage(bytes: &[u8]) -> &'static str {
 }
 
 pub async fn status() -> Json<Value> {
+    if crate::plugin_compute::configured() {
+        return Json(crate::plugin_compute::status().await.unwrap_or_else(|_|json!({"configured":true,"rental":null,"error":"Plugin status unavailable; cleanup is unconfirmed."})));
+    }
     let Ok((_, plan)) = config() else {
         return Json(json!({"configured":false,"rental":null}));
     };
@@ -429,6 +457,12 @@ pub async fn remove(
     headers: HeaderMap,
 ) -> Result<Json<Value>, StatusCode> {
     authorize(&state, &headers)?;
+    if crate::plugin_compute::configured() {
+        return crate::plugin_compute::call(json!({"operation":"remove"}))
+            .await
+            .map(Json)
+            .map_err(|_| StatusCode::CONFLICT);
+    }
     let _action = state.rentals.action.lock().await;
     let (_, plan) = config().map_err(|_| StatusCode::CONFLICT)?;
     let control = directory(&plan).map_err(|_| StatusCode::CONFLICT)?;
@@ -454,6 +488,13 @@ fn confirmed_removed(receipt: &Value, node: &Value, plan: &Value) -> bool {
 }
 
 pub async fn request_cleanup(state: &AppState) -> anyhow::Result<()> {
+    if crate::plugin_compute::configured() {
+        let status = crate::plugin_compute::call(json!({"operation":"status"})).await?;
+        if status["attempt_consumed"] == true && status["provider_confirmed_removed"] != true {
+            crate::plugin_compute::call(json!({"operation":"remove"})).await?;
+        }
+        return Ok(());
+    }
     let _action = state.rentals.action.lock().await;
     if let Ok((_, plan)) = config() {
         let control = directory(&plan)?;

@@ -37,7 +37,7 @@ async fn private_provider_selection_never_exposes_keys_and_disconnect_does_not_f
     )
     .unwrap();
     std::fs::set_permissions(&settings, std::fs::Permissions::from_mode(0o600)).unwrap();
-    let status = providers::status().await.0;
+    let status = providers::status().await.unwrap().0;
     assert_eq!(status["vast"]["account_id"], 42);
     assert_eq!(status["vast"]["configured"], true);
     assert!(!status.to_string().contains("private-key"));
@@ -105,7 +105,10 @@ async fn private_provider_selection_never_exposes_keys_and_disconnect_does_not_f
     assert!(!key.exists());
     assert!(managed.join("desktop-intent.json").exists());
     assert!(root.join("external.env").exists());
-    assert_eq!(providers::status().await.0["vast"]["configured"], false);
+    assert_eq!(
+        providers::status().await.unwrap().0["vast"]["configured"],
+        false
+    );
     headers.insert("origin", "https://untrusted.invalid".parse().unwrap());
     assert!(providers::verify(State(state), headers).await.is_err());
 }

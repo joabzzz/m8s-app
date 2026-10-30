@@ -1,6 +1,20 @@
 # m8s-app — experimental compute console
 
+[![Real Qwen 27B app conversation on rented stock-Mesh compute](docs/assets/v0-cover.png)](docs/assets/qwen27-demo.mp4)
+
+[Watch the one-minute demo](docs/assets/qwen27-demo.mp4) · [30-second GIF](docs/assets/qwen27-demo.gif) · [Acceptance evidence](docs/V0_ACCEPTANCE.md)
+
 Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
+
+**The pinned stock-Mesh v0 workflow passed live verification.** The app booked
+one Vast GPU into its selected private mesh, completed a Qwen 27B canary and two
+chat turns, then removed the rental. A separate provider query confirmed no
+instances or volumes remained. The opt-in `M8S_PLUGIN` adapter uses the same
+`m8s.operator/v0` operations as the Mesh plugin. Token-only admission is weaker
+than owner certification and is labeled separately. The demo includes one bounded
+download-recovery restart; its waits are shortened and operational IDs redacted.
+Use explicit `M8S_STOCK_MESH` alongside the plugin for the app-owned stock-main
+passive client; the default embedded runtime remains separate.
 Home is the landing page, with active local meshes and recent connections.
 Chat and Compute appear as top tabs only while attached to a mesh. A private mesh
 can start as a passive client without downloading a model; local model sharing is
@@ -8,16 +22,20 @@ an explicit alternative. Recent private meshes retain their invite for reconnect
 
 Connect Vast from Compute → Providers or Settings → Manage compute providers.
 Paste an API key, verify the account, and browse hardware. Keys stay in private
-local files; no rental is created during setup. Nebius is coming soon.
+local files; no rental is created during setup. In opt-in plugin mode, credentials
+come from the selected plugin plan and the Providers tab shows their configuration
+status; key changes happen outside the app. Nebius is coming soon.
 
 The Compute tab shows discovered hardware, VRAM capacity, running models and node
 details. Add compute browses Vast offers with per-GPU model-size estimates,
-rechecks availability and budget, and attaches a bounded rental to the selected
-mesh through an app-owned signing bridge. Owned rentals have explicit removal
-and provider-confirmed cleanup. See [setup and limits](docs/M8S_DEMO.md) and the
+rechecks availability and budget, and provides experimental selected-mesh
+provisioning through either the app-owned signing bridge or the opt-in token
+plugin. The pinned token-only selected-mesh flow is live-verified. Owned rentals
+have explicit removal and provider-confirmed cleanup. See [setup and limits](docs/M8S_DEMO.md) and the
 [current-mesh decision](docs/decisions/002-current-mesh-compute.md).
 
-The current runtime supports Qwen 3.8 27B on qualified Blackwell hardware. Booking
+The saved legacy dedicated-mesh demo served Qwen 3.8 27B on Blackwell hardware;
+the new recording above uses the qualified stock-main worker. Booking
 is one attempt per explicitly reconciled plan; general repeat booking, multiple
 rentals and live GPU utilization remain unfinished. The older dedicated managed
 session is still available for reproducing the saved demo.

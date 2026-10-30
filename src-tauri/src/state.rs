@@ -53,7 +53,7 @@ pub struct AppState {
     pub lifecycle: Mutex<()>,
     pub compute: Option<Arc<crate::compute::Compute>>,
     pub phase: RwLock<Phase>,
-    pub node: Mutex<Option<mesh_llm_sdk::MeshNode>>,
+    pub node: Mutex<Option<crate::node::LocalNode>>,
     /// Embedded goose agent, created lazily on the first chat turn.
     pub agent: Mutex<Option<crate::agent::AgentHandle>>,
     pub events: broadcast::Sender<AppEvent>,

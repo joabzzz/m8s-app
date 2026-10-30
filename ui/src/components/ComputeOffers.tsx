@@ -15,6 +15,7 @@ export interface Offer {
   transfer_micro_usd_per_gb: number
 }
 interface Quote {
+  admission?: string
   quote_id: string
   expires_at: number
   cap_micro_usd: number
@@ -171,7 +172,7 @@ export default function ComputeOffers({
               ? 'The active mesh changed. Select an offer again to review the new target.'
               : !selected.offer.qualified_for_profile
                 ? 'This hardware is listed for capacity comparison. It does not qualify for the current Qwen 27B runtime.'
-                : 'The qualified runtime serves Qwen 3.8 27B. Check a fresh quote before renting; no charge occurs until you confirm.'}
+                : 'The configured demo targets Qwen 3.8 27B. Hardware compatibility does not prove runtime readiness. Review a fresh quote before renting.'}
           </p>
           {bookingError && (
             <p role="alert" className="mb-4 text-sm text-warn">
@@ -183,6 +184,13 @@ export default function ComputeOffers({
               {quote.model} · Maximum lease budget ${(quote.cap_micro_usd / 1e6).toFixed(2)}{' '}
               including reserves. Quote expires at{' '}
               {new Date(quote.expires_at * 1000).toLocaleTimeString()}.
+            </p>
+          )}
+          {quote?.admission === 'token-only-provider-trusted' && (
+            <p role="note" className="mb-4 text-sm text-warn">
+              Token-only v0: this worker is not owner-certified. The provider can access its join
+              token, model and inference data. Use a mesh whose admission policy and provider trust
+              you accept. Cleanup remains bounded.
             </p>
           )}
           <div className="flex gap-3">
