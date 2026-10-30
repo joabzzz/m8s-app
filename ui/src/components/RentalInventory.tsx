@@ -15,6 +15,7 @@ interface Rental {
     requested_model_count?: number
     hosted_model_count?: number
     runtime_error_count?: number
+    download_restart_count?: number
     node_loading?: boolean
     runtime_snapshot_truncated?: boolean
     worker_running?: boolean
@@ -159,6 +160,9 @@ export default function RentalInventory({
                     ? ' · Partial snapshot'
                     : ''}
                 </p>
+              )}
+              {(count(rental.worker_status.download_restart_count) ?? 0) > 0 && (
+                <p className="mt-1">Model download recovery attempted once. Original rental deadline applies.</p>
               )}
               {(count(rental.worker_status.runtime_error_count) ?? 0) > 0 && (
                 <p className="mt-1 text-warn" role="status">

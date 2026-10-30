@@ -210,6 +210,7 @@ test('worker observations never promote a provisioning rental to verified infere
               requested_model_count: 1,
               hosted_model_count: 0,
               runtime_error_count: 1,
+              download_restart_count: 1,
             },
           },
         })
@@ -224,5 +225,6 @@ test('worker observations never promote a provisioning rental to verified infere
   await expect(rental).toContainText('Model cache size:')
   await expect(rental).toContainText('Models requested: 1 · Hosted: 0')
   await expect(rental).toContainText('Worker reports 1 runtime error(s).')
+  await expect(rental).toContainText('Model download recovery attempted once. Original rental deadline applies.')
   await expect(rental.getByRole('button', { name: 'Remove compute', exact: true })).toBeVisible()
 })
