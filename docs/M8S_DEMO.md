@@ -1,7 +1,14 @@
 # Bounded Qwen 27B desktop demo
 
-The adapter is ported from the earlier desktop demo. This fork has not yet
-completed a live GPU run; synthetic screenshots are not live evidence.
+The current token-only selected-mesh flow completed a real stock-main GPU run,
+two app chat turns and independently confirmed destruction. See
+[V0_ACCEPTANCE.md](V0_ACCEPTANCE.md) for pins, evidence, limits and reviewed media.
+Use the stock-main/plugin instructions later in this document for that flow.
+
+## Legacy dedicated certified adapter
+
+The following dedicated-session instructions describe the earlier private-fork
+adapter, not the new selected-mesh recording.
 
 This branch adds an opt-in **Private GPU demo** screen to the Tauri app. It uses
 m8s's certified, model-free owner client, the existing Chat renderer and the live
@@ -181,7 +188,7 @@ empty provider inventories, then select a separately reconciled plan. Do not
 reset the old intent or fabricate a provider-removal receipt for a nonexistent
 instance. A dedicated pre-CREATE failure projection remains follow-up work.
 
-## Stock-Mesh v0 adapter (qualification pending)
+## Stock-Mesh v0 adapter (pinned live workflow verified)
 
 Set `M8S_PLUGIN` to the absolute, owned `m8s-plugin` executable and inherit
 `M8S_CLI` plus `M8S_V0_PLAN` when launching the app. The plan and target files

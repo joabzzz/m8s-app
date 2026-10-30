@@ -1,6 +1,7 @@
 # ADR 002 — Current-mesh compute and local owner custody
 
-Status: attachment and removal live demonstrated; inference not yet live qualified, 2026-10-29. Supersedes the dedicated
+Status: pinned stock-main token-only attachment, inference, app chat and removal
+live verified, 2026-10-30. Supersedes the dedicated
 owner-client topology for new desktop bookings; the older opt-in demo remains.
 
 The desktop owns one embedded Mesh node, which can be a passive client or a
@@ -126,3 +127,14 @@ termination of the entire app process is not yet covered by an independent
 local-node supervisor. Do not infer that local process absence proves rental
 removal. The existing rental watchdog and retained-liability rules remain the
 financial cleanup authority.
+
+
+### Stock-main acceptance, 2026-10-30
+
+The explicit stock process mode and shared plugin adapter completed the real
+selected-mesh rental, owner-routed canary, two app chat turns and independent
+provider absence check. A single supervised download-recovery restart retained
+worker identity and the original deadline. See [acceptance](../V0_ACCEPTANCE.md)
+for exact pins and admission limits. Earlier unsuccessful attempts above remain
+historical evidence. The recording discloses transient stale peer discovery after
+removal; live GPU utilization and owner-certified rental admission remain open.

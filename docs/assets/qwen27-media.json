@@ -1,0 +1,11 @@
+{
+  "schema": "m8s.reviewed-demo-media/v1",
+  "sha256": {
+    "qwen27-demo.mp4": "27f219b9e39a88812e9f99d9756551aeab3820cdb7635b043f0b7e4ea88f2806",
+    "qwen27-demo.gif": "f8522cf9c2dca7235d2a32a17dd05196e1757d555a8ed29611040f9c3ce7b044",
+    "v0-cover.png": "004f01a9a65d8aa3de11f59b819c2517b8dc699237b802983eefb16e37a6b14f"
+  },
+  "edits": "Live UI; waits shortened; title cards; operational IDs redacted; peer-discovery lag disclosed",
+  "admission": "token-only-provider-trusted",
+  "certificate_verified": false
+}
