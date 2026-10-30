@@ -90,3 +90,39 @@ not download completion or inference readiness. Even a matching worker-reported
 mesh identity remains explicitly “inference not yet verified” until the existing
 owner-routed canary succeeds. Remove compute remains available during startup.
 The restricted SSH status command grants no interactive terminal access.
+
+
+### Upstream owner-control relay collision
+
+Live stock-worker testing exposed a relay collision in embedded upstream
+b4b33ef8: the main mesh endpoint and owner-control listener share an endpoint ID
+and both register with the relay. The relay evicts the main connection. Local
+admission can pass while remote joining fails. The fix already exists in stock
+main 280944334: keep owner-control on its direct endpoint and retain the main
+mesh relay registration. Use that stock upstream revision rather than removing owner authentication or
+changing TLS/relay admission policy. Remote acceptance still requires a new
+bounded test; a source change is not evidence of successful inference.
+
+
+Directly upgrading the embedded SDK fails dependency resolution: current Mesh's
+rusqlite and pinned Goose's sqlx require incompatible native SQLite libraries.
+Keep the existing embedded SDK for the ordinary app. Explicit v0 runs may set
+`M8S_STOCK_MESH` to an owned stock-main executable alongside `M8S_PLUGIN`.
+The app starts and owns this passive local process, using its existing device
+owner key and `--owner-required`; invite material travels only through private
+files. HTTP status, inference and plugin target checks address that process.
+No Mesh fork or authentication downgrade is introduced.
+
+This profile supports creating a private passive mesh or joining a private
+invite as a passive client. It refuses public discovery and local model serving
+rather than silently switching runtimes. Startup is bounded, occupied ports are
+refused, and shutdown stops/reaps the owned child after rental cleanup. Private
+session logs and node material remain local; the temporary join file is removed.
+The child does not inherit provider credentials or the parent's environment.
+
+
+Follow-up: normal shutdown and task cancellation own/reap the child; abrupt
+termination of the entire app process is not yet covered by an independent
+local-node supervisor. Do not infer that local process absence proves rental
+removal. The existing rental watchdog and retained-liability rules remain the
+financial cleanup authority.

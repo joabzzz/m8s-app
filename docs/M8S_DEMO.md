@@ -207,3 +207,32 @@ no new live demo has passed the stock-Mesh acceptance gates yet.
 The recorder recognizes token-mode readiness separately and records its admission
 mode. The editor labels token-mode footage explicitly; this tooling has syntax
 checks, but no successful stock-v0 capture yet.
+
+
+### Stock-main local node for v0
+
+Set `M8S_STOCK_MESH=/absolute/stock-main/mesh-llm` together with the plugin and
+plan environment above. Use the qualified main revision
+`2809443345ea8134db62a8b433f5bb2bb5f1d123` (0.78.0). The app owns a passive
+stock Mesh child process with its device owner key; its Chat and Compute routes
+use that child's ports. This avoids the older embedded runtime's owner-control
+relay collision and a native SQLite dependency conflict between current Mesh
+and Goose. The normal embedded mode is unchanged.
+
+In this explicit profile, create a private mesh without a local model, or join
+by private invite as a passive client. Public discovery/local model serving are
+not supported in the stock-child profile. Session files/logs stay private under
+the app's compute-owner directory. Leaving the mesh requests rental cleanup
+before stopping the local node. This mode still needs remote inference
+qualification; it is not a completed demo.
+
+
+The local process check is reproducible without provider credentials or rentals:
+
+```sh
+node scripts/check-stock-node.mjs /absolute/stock-mesh /absolute/m8s-plugin /absolute/m8s /absolute/mesh-consoled /absolute/NEW-private-output
+```
+
+It checks verified local ownership, app/plugin status, mutual peer discovery,
+absence of the duplicate-relay error, and shutdown of the app-owned stock node.
+This is local admission/lifecycle evidence, not GPU or remote-network proof.

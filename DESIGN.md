@@ -98,7 +98,7 @@ untestable UI layer).
 - The running node is independent from the visible page. Home and Chat share a
   top navigation bar; opening Home does not call shutdown, and the connection
   pill returns directly to the live chat.
-- The SDK hosts one embedded `MeshNode` at a time. Choosing another public or
+- By default the SDK hosts one embedded `MeshNode` at a time. Choosing another public or
   private mesh while connected therefore opens a confirmation. Confirmation
   performs one orderly shutdown followed by the requested launch; cancellation
   leaves the current mesh untouched. Local Goose chats survive mesh switches.
@@ -251,3 +251,14 @@ untestable UI layer).
 9. **Cross-platform**: no `cfg(target_os)` in this repo; Linux is near-term
    feasible (mesh-llm ships Linux runtimes); Windows depends on mesh-llm
    runtime maturity. "Checking your Mac…" is just copy.
+
+
+## Stock-main process mode for the v0 demo
+
+With explicit `M8S_STOCK_MESH` and `M8S_PLUGIN`, `stock_node.rs` owns a private,
+passive stock-main process; `LocalNode` unifies its shutdown with embedded mode.
+The HTTP proxy and Goose use the same selected node ports in both modes. The
+stock child retains owner authentication and gets no provider credentials.
+Current main cannot link into this Goose build because the native SQLite
+versions conflict; do not relax the rmcp pins or patch Mesh to resolve it.
+See ADR 002 and `docs/M8S_DEMO.md` for constraints and pending live qualification.

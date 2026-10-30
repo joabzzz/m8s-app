@@ -11,6 +11,19 @@ use std::time::Duration;
 /// in seconds. Used when join-and-share is requested without an explicit model.
 pub const DEFAULT_MODEL: &str = "unsloth/Qwen3-0.6B-GGUF:Q4_K_M";
 
+pub enum LocalNode {
+    Embedded(MeshNode),
+    Stock(crate::stock_node::StockNode),
+}
+impl LocalNode {
+    async fn shutdown(self) -> Result<()> {
+        match self {
+            Self::Embedded(node) => node.shutdown().await,
+            Self::Stock(node) => node.shutdown().await,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct HostRequest {
     #[serde(default)]
@@ -62,6 +75,13 @@ pub async fn start_join(state: Arc<AppState>, req: JoinRequest) {
 }
 
 async fn run_host(state: &Arc<AppState>, req: HostRequest) -> Result<()> {
+    if crate::stock_node::configured() {
+        anyhow::ensure!(
+            req.model.is_none() && req.visibility == Visibility::Private,
+            "Stock-Mesh v0 starts a private passive client; rent serving hardware in Compute"
+        );
+        return run_stock(state, None, req.mesh_name).await;
+    }
     if let Some(model) = &req.model {
         ensure_runtime(state).await?;
         ensure_model(state, model).await?;
@@ -101,7 +121,7 @@ async fn run_host(state: &Arc<AppState>, req: HostRequest) -> Result<()> {
         .owner_required(true);
     let node = builder.start().await.context("starting mesh node")?;
     let invite_token = node.invite_token().map(str::to_owned);
-    *state.node.lock().await = Some(node);
+    *state.node.lock().await = Some(LocalNode::Embedded(node));
 
     state
         .set_phase(Phase::Running(RunningInfo {
@@ -119,6 +139,13 @@ async fn run_host(state: &Arc<AppState>, req: HostRequest) -> Result<()> {
 }
 
 async fn run_join(state: &Arc<AppState>, mut req: JoinRequest) -> Result<()> {
+    if crate::stock_node::configured() {
+        anyhow::ensure!(
+            !req.public && !req.share,
+            "Stock-Mesh v0 supports passive joining by private invite"
+        );
+        return run_stock(state, Some(req.token.trim().to_owned()), None).await;
+    }
     if req.share {
         // Sharing needs a model to serve; default to the tiny fast-start one
         // (same as mesh-app) so join-and-share never forces a model decision.
@@ -173,7 +200,7 @@ async fn run_join(state: &Arc<AppState>, mut req: JoinRequest) -> Result<()> {
         .owner_required(true);
     let node = builder.start().await.context("joining mesh")?;
     let invite_token = node.invite_token().map(str::to_owned);
-    *state.node.lock().await = Some(node);
+    *state.node.lock().await = Some(LocalNode::Embedded(node));
 
     state
         .set_phase(Phase::Running(RunningInfo {
@@ -192,6 +219,45 @@ async fn run_join(state: &Arc<AppState>, mut req: JoinRequest) -> Result<()> {
             api_port: state.ports.api,
             console_port: state.ports.console,
             mesh_name: req.public.then(|| "Global mesh".to_string()),
+        }))
+        .await;
+    Ok(())
+}
+
+async fn run_stock(
+    state: &Arc<AppState>,
+    join: Option<String>,
+    name: Option<String>,
+) -> Result<()> {
+    let mode = if join.is_some() {
+        Mode::Join
+    } else {
+        Mode::Host
+    };
+    state.set_phase(Phase::Starting { mode, model: None }).await;
+    if state.attachment.get().is_none() {
+        let _ = state.attachment.set(crate::attachment::Attachment::open()?);
+    }
+    let owner = state.attachment.get().expect("initialized owner");
+    let node = crate::stock_node::StockNode::start(
+        state,
+        &owner.key_path,
+        join.as_deref(),
+        name.as_deref(),
+    )
+    .await?;
+    let invite_token = Some(node.invite_token().to_owned());
+    *state.node.lock().await = Some(LocalNode::Stock(node));
+    state
+        .set_phase(Phase::Running(RunningInfo {
+            mode,
+            visibility: Visibility::Private,
+            model: None,
+            serving: false,
+            invite_token,
+            api_port: state.ports.api,
+            console_port: state.ports.console,
+            mesh_name: name,
         }))
         .await;
     Ok(())
