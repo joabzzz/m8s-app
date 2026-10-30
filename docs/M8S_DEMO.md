@@ -191,7 +191,11 @@ requirements. The selected node/mesh must match the app's current attachment.
 
 Offers, quotes, launch, status and removal then use the same `m8s.operator/v0`
 implementation as Mesh's plugin tool. Provider credentials come from the selected
-private plan; the Providers tab cannot replace them in this mode. A failed plugin
+private plan. The Providers tab reads configuration presence through the plugin,
+labels it as externally managed and offers Refresh status; it does not present
+unsupported key-edit or disconnect controls. Configuration presence is not a live
+API-key verification. Missing or unsafe credential files do not enable browsing.
+The Providers tab cannot replace credentials in this mode. A failed plugin
 operation does not fall back to the historical launcher.
 
 Token-only admission does not verify an owner-issued worker certificate. The

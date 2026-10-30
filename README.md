@@ -16,7 +16,9 @@ an explicit alternative. Recent private meshes retain their invite for reconnect
 
 Connect Vast from Compute → Providers or Settings → Manage compute providers.
 Paste an API key, verify the account, and browse hardware. Keys stay in private
-local files; no rental is created during setup. Nebius is coming soon.
+local files; no rental is created during setup. In opt-in plugin mode, credentials
+come from the selected plugin plan and the Providers tab shows their configuration
+status; key changes happen outside the app. Nebius is coming soon.
 
 The Compute tab shows discovered hardware, VRAM capacity, running models and node
 details. Add compute browses Vast offers with per-GPU model-size estimates,

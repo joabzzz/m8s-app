@@ -6,6 +6,7 @@ interface Connection {
   account_id?: number
   verified_at?: number
   source?: string
+  managed_externally?: boolean
 }
 export async function openProviderPage(target: 'vast_keys' | 'vast_console') {
   const response = await fetch('/app/providers/open', {
@@ -113,7 +114,8 @@ export default function Providers({
       setError(String(error))
     }
   }
-  const showForm = editing || (forceOpen && !connection?.configured)
+  const managed = connection?.managed_externally === true
+  const showForm = !managed && (editing || (forceOpen && !connection?.configured))
   return (
     <section id="compute-providers" aria-label="Compute providers" className="mb-5 max-w-3xl">
       <div className="mb-4 flex items-center justify-between">
@@ -143,23 +145,34 @@ export default function Providers({
             <span className="ml-auto flex items-center gap-1 text-xs text-ink-muted">
               {connection?.configured ? (
                 <>
-                  <CheckCircle2 size={14} className="text-good" /> Connected
+                  <CheckCircle2 size={14} className="text-good" />{' '}
+                  {managed ? 'Configured' : 'Connected'}
                 </>
               ) : connection ? (
-                'Not connected'
+                managed ? (
+                  'Not configured'
+                ) : (
+                  'Not connected'
+                )
               ) : (
                 'Checking…'
               )}
             </span>
           </div>
           <p className="mt-3 text-xs text-ink-muted">
-            {connection?.account_id
-              ? `Account ${connection.account_id}`
-              : connection?.configured
-                ? 'A provider key was detected on this device.'
-                : 'Connect your account to find and rent GPU hardware.'}
+            {managed
+              ? 'Managed by the m8s plugin. Provider credentials are configured outside this app.'
+              : connection?.account_id
+                ? `Account ${connection.account_id}`
+                : connection?.configured
+                  ? 'A provider key was detected on this device.'
+                  : 'Connect your account to find and rent GPU hardware.'}
           </p>
-          {connection?.configured ? (
+          {managed ? (
+            <Button className="mt-4" variant="quiet" disabled={busy} onClick={() => void load()}>
+              Refresh status
+            </Button>
+          ) : connection?.configured ? (
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="quiet" disabled={busy} onClick={() => void action('verify')}>
                 Verify connection

@@ -122,3 +122,35 @@ test('managed rentals expose provider controls without pretending to offer termi
   await expect(rental.getByRole('button', { name: 'Copy instance ID' })).toBeVisible()
   await expect(rental.getByRole('button', { name: 'Remove compute', exact: true })).toBeVisible()
 })
+
+for (const configured of [true, false]) {
+  test(`plugin-managed provider ${configured ? 'allows browsing' : 'requires external setup'} without app key edits`, async ({
+    page,
+  }) => {
+    await installMockBackend(page, { startRunning: true })
+    await page.addInitScript((configured) => {
+      const original = window.fetch
+      window.fetch = async (input, init) => {
+        if (String(input) === '/app/providers')
+          return Response.json({
+            vast: { configured, source: 'plugin', managed_externally: true },
+            controller_ready: true,
+          })
+        return original(input, init)
+      }
+    }, configured)
+    await page.goto('/')
+    await page.getByTestId('nav-compute').click()
+    await page.getByRole('button', { name: 'Providers', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Compute providers' })).toContainText(
+      'Managed by the m8s plugin',
+    )
+    await expect(page.getByRole('button', { name: 'Refresh status', exact: true })).toBeVisible()
+    for (const name of ['Connect Vast', 'Replace key', 'Verify connection', 'Disconnect'])
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Add compute', exact: true }).click()
+    await expect(page.getByLabel('Vast API key', { exact: true })).toHaveCount(0)
+    if (configured) await expect(page.getByRole('button', { name: 'Fleet overview' })).toBeVisible()
+    else await expect(page.getByRole('region', { name: 'Compute providers' })).toBeVisible()
+  })
+}

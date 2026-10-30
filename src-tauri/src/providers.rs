@@ -160,6 +160,17 @@ fn project(value: Option<&Value>, configured: bool) -> Value {
     json!({"id":"vast","configured":configured,"verified_at":value.and_then(|v|v["verified_at"].as_i64()),"account_id":value.and_then(|v|v["account_id"].as_u64()),"source":if value.is_some(){"app"}else{"environment"}})
 }
 pub async fn status() -> Json<Value> {
+    if crate::plugin_compute::configured() {
+        let status = crate::plugin_compute::call(json!({"operation":"status"})).await;
+        let configured = status
+            .as_ref()
+            .is_ok_and(|s| s["provider_configured"] == true);
+        return Json(json!({
+            "vast":{"id":"vast","configured":configured,"source":"plugin","managed_externally":true},
+            "nebius":{"id":"nebius","available":false},
+            "controller_ready":status.is_ok()
+        }));
+    }
     let value = settings().ok().flatten();
     let configured = credential().is_ok_and(|p| p.is_file());
     Json(
