@@ -34,6 +34,7 @@ try {
   await mark('fleet')
   await hold(3000)
   await page.getByRole('button', { name: 'Providers', exact: true }).click()
+  await page.getByText(tokenMode ? 'Configured' : 'Connected', { exact: true }).waitFor()
   await hold(2500)
   await mark('providers')
   await page.getByRole('button', { name: 'Fleet', exact: true }).click()
@@ -107,6 +108,8 @@ try {
 } catch(error) {
   await mark('recording-error')
   console.error(String(error))
+  await save('failure.json', { message: String(error) })
+  await page.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {})
 } finally {
   if(requested) {
     await mark('remove-compute')

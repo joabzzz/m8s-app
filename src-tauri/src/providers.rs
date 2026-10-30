@@ -159,23 +159,25 @@ fn store(value: &Value) -> anyhow::Result<()> {
 fn project(value: Option<&Value>, configured: bool) -> Value {
     json!({"id":"vast","configured":configured,"verified_at":value.and_then(|v|v["verified_at"].as_i64()),"account_id":value.and_then(|v|v["account_id"].as_u64()),"source":if value.is_some(){"app"}else{"environment"}})
 }
-pub async fn status() -> Json<Value> {
+fn plugin_status(result: anyhow::Result<Value>) -> Reply {
+    let configured = result.ok().and_then(|s| s["provider_configured"].as_bool())
+        .ok_or_else(|| (StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error":"Could not read provider configuration. Retry the connection check."}))))?;
+    Ok(Json(json!({
+        "vast":{"id":"vast","configured":configured,"source":"plugin","managed_externally":true},
+        "nebius":{"id":"nebius","available":false},
+        "controller_ready":true
+    })))
+}
+pub async fn status() -> Reply {
     if crate::plugin_compute::configured() {
-        let status = crate::plugin_compute::call(json!({"operation":"status"})).await;
-        let configured = status
-            .as_ref()
-            .is_ok_and(|s| s["provider_configured"] == true);
-        return Json(json!({
-            "vast":{"id":"vast","configured":configured,"source":"plugin","managed_externally":true},
-            "nebius":{"id":"nebius","available":false},
-            "controller_ready":status.is_ok()
-        }));
+        return plugin_status(crate::plugin_compute::call(json!({"operation":"status"})).await);
     }
     let value = settings().ok().flatten();
     let configured = credential().is_ok_and(|p| p.is_file());
-    Json(
+    Ok(Json(
         json!({"vast":project(value.as_ref(),configured),"nebius":{"id":"nebius","available":false},"controller_ready":controller().is_some_and(|p|p.is_file())}),
-    )
+    ))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -407,6 +409,19 @@ pub async fn open_page(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn plugin_read_failure_is_not_missing_configuration() {
+        for result in [Err(anyhow::anyhow!("busy")), Ok(json!({}))] {
+            let (code, body) = plugin_status(result).unwrap_err();
+            assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE);
+            assert!(body.0.get("vast").is_none());
+        }
+        for configured in [true, false] {
+            let body = plugin_status(Ok(json!({"provider_configured":configured}))).unwrap();
+            assert_eq!(body.0["vast"]["configured"], configured);
+            assert_eq!(body.0["controller_ready"], true);
+        }
+    }
     #[test]
     fn browser_open_accepts_only_fixed_destinations() {
         assert!(serde_json::from_value::<OpenPage>(json!({"target":"vast_keys"})).is_ok());

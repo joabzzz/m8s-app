@@ -154,3 +154,31 @@ for (const configured of [true, false]) {
     else await expect(page.getByRole('region', { name: 'Compute providers' })).toBeVisible()
   })
 }
+
+test('a failed provider status read can be retried without reporting missing setup', async ({ page }) => {
+  await installMockBackend(page, { startRunning: true })
+  await page.addInitScript(() => {
+    const original = window.fetch
+    let reads = 0
+    window.fetch = async (input, init) => {
+      if (String(input) === '/app/providers') {
+        if (reads++ === 0) return Response.json({ error: 'Temporarily unavailable' }, { status: 503 })
+        return Response.json({
+          vast: { configured: true, source: 'plugin', managed_externally: true },
+          controller_ready: true,
+        })
+      }
+      return original(input, init)
+    }
+  })
+  await page.goto('/')
+  await page.getByTestId('nav-compute').click()
+  await page.getByRole('button', { name: 'Providers', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Could not load providers')
+  await expect(page.getByText('Not configured', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Retry connection check', exact: true }).click()
+  await expect(page.getByText('Configured', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Fleet', exact: true }).click()
+  await page.getByRole('button', { name: 'Add compute', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Fleet overview' })).toBeVisible()
+})
