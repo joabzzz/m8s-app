@@ -8,7 +8,10 @@ Fork of Mesh-LLM/desktop-app for rented hardware, providers and inference.
 the same `m8s.operator/v0` operations as the Mesh plugin. Token-only admission
 is weaker than owner certification and is labeled separately. The historical
 Qwen recording used a private runtime fork; it does not prove this new flow.
-The latest attempted capture did not complete inference and was not published.
+The latest attempt joined a real rented GPU using stock main, but model transfer
+stalled before inference. It was removed and the failed capture was not published.
+Use explicit `M8S_STOCK_MESH` alongside the plugin for the app-owned stock-main
+passive client; the default embedded runtime remains separate.
 Home is the landing page, with active local meshes and recent connections.
 Chat and Compute appear as top tabs only while attached to a mesh. A private mesh
 can start as a passive client without downloading a model; local model sharing is
