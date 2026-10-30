@@ -12,6 +12,11 @@ interface Rental {
     phase: string
     cache_file_bytes?: number
     network_received_bytes?: number
+    requested_model_count?: number
+    hosted_model_count?: number
+    runtime_error_count?: number
+    node_loading?: boolean
+    runtime_snapshot_truncated?: boolean
     worker_running?: boolean
   } | null
 }
@@ -26,6 +31,11 @@ function workerPhase(phase: string) {
       stopped: 'Worker stopped',
     }[phase] ?? 'Worker status unknown'
   )
+}
+function count(value: number | undefined) {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 256
+    ? value
+    : undefined
 }
 function observedGb(bytes: number | undefined) {
   return typeof bytes === 'number' && Number.isFinite(bytes) && bytes >= 0
@@ -140,6 +150,22 @@ export default function RentalInventory({
                 Model cache size: {observedGb(rental.worker_status.cache_file_bytes)} · Network
                 received: {observedGb(rental.worker_status.network_received_bytes)}
               </p>
+              {count(rental.worker_status.requested_model_count) !== undefined && (
+                <p className="mt-1">
+                  Models requested: {count(rental.worker_status.requested_model_count)} · Hosted:{' '}
+                  {count(rental.worker_status.hosted_model_count) ?? 'Unknown'}
+                  {rental.worker_status.node_loading === true ? ' · Loading' : ''}
+                  {rental.worker_status.runtime_snapshot_truncated === true
+                    ? ' · Partial snapshot'
+                    : ''}
+                </p>
+              )}
+              {(count(rental.worker_status.runtime_error_count) ?? 0) > 0 && (
+                <p className="mt-1 text-warn" role="status">
+                  Worker reports {count(rental.worker_status.runtime_error_count)} runtime error(s).
+                  Inference is still unverified; Remove compute remains available.
+                </p>
+              )}
               <p className="mt-1 text-ink-faint">
                 Worker-reported observations, not download completion.
               </p>

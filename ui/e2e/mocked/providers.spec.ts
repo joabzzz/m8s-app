@@ -207,6 +207,9 @@ test('worker observations never promote a provisioning rental to verified infere
               worker_running: true,
               cache_file_bytes: 2000000000,
               network_received_bytes: 3000000000,
+              requested_model_count: 1,
+              hosted_model_count: 0,
+              runtime_error_count: 1,
             },
           },
         })
@@ -219,5 +222,7 @@ test('worker observations never promote a provisioning rental to verified infere
   await expect(rental).toContainText('inference not yet verified')
   await expect(rental).toContainText('Worker-reported observations, not download completion.')
   await expect(rental).toContainText('Model cache size:')
+  await expect(rental).toContainText('Models requested: 1 · Hosted: 0')
+  await expect(rental).toContainText('Worker reports 1 runtime error(s).')
   await expect(rental.getByRole('button', { name: 'Remove compute', exact: true })).toBeVisible()
 })
