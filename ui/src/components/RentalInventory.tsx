@@ -8,6 +8,29 @@ interface Rental {
   target: { mesh_id: string; node_id: string }
   expires_at: number
   stage: string
+  worker_status?: {
+    phase: string
+    cache_file_bytes?: number
+    network_received_bytes?: number
+    worker_running?: boolean
+  } | null
+}
+function workerPhase(phase: string) {
+  return (
+    {
+      awaiting_join: 'Waiting for provisioning',
+      unknown: 'Worker status unknown',
+      starting: 'Worker starting',
+      waiting_for_mesh: 'Waiting for mesh attachment',
+      joined: 'Worker reports mesh attachment',
+      stopped: 'Worker stopped',
+    }[phase] ?? 'Worker status unknown'
+  )
+}
+function observedGb(bytes: number | undefined) {
+  return typeof bytes === 'number' && Number.isFinite(bytes) && bytes >= 0
+    ? `${(bytes / 1_000_000_000).toFixed(1)} GB`
+    : 'Unavailable'
 }
 export default function RentalInventory({
   onInspect,
@@ -110,6 +133,18 @@ export default function RentalInventory({
                                 ? 'Configuring host'
                                 : 'Provisioning or running'}
           </p>
+          {rental.stage === 'token_provisioning' && rental.worker_status && (
+            <div className="mt-3 text-xs text-ink-muted" aria-label="Worker startup observation">
+              <p>{workerPhase(rental.worker_status.phase)} · inference not yet verified</p>
+              <p className="mt-1">
+                Model cache size: {observedGb(rental.worker_status.cache_file_bytes)} · Network
+                received: {observedGb(rental.worker_status.network_received_bytes)}
+              </p>
+              <p className="mt-1 text-ink-faint">
+                Worker-reported observations, not download completion.
+              </p>
+            </div>
+          )}
           <p className="mt-2 text-xs text-ink-muted">
             Mesh {rental.target.mesh_id} · bounded deadline{' '}
             {new Date(rental.expires_at * 1000).toLocaleTimeString()}
@@ -151,7 +186,8 @@ export default function RentalInventory({
               <h3 className="font-semibold">Managed rental access</h3>
               <p className="mt-2 text-ink-muted">
                 Use the Vast console for container logs and network details. This runtime’s SSH
-                login only accepts provisioning commands, so it cannot open an interactive terminal.
+                login only accepts provisioning and read-only status commands, so it cannot open an
+                interactive terminal.
               </p>
               <p className="mt-2 text-ink-muted">
                 Pause/resume is unavailable for this short-lived rental. Stopping the container

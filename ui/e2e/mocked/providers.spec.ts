@@ -155,14 +155,17 @@ for (const configured of [true, false]) {
   })
 }
 
-test('a failed provider status read can be retried without reporting missing setup', async ({ page }) => {
+test('a failed provider status read can be retried without reporting missing setup', async ({
+  page,
+}) => {
   await installMockBackend(page, { startRunning: true })
   await page.addInitScript(() => {
     const original = window.fetch
     let reads = 0
     window.fetch = async (input, init) => {
       if (String(input) === '/app/providers') {
-        if (reads++ === 0) return Response.json({ error: 'Temporarily unavailable' }, { status: 503 })
+        if (reads++ === 0)
+          return Response.json({ error: 'Temporarily unavailable' }, { status: 503 })
         return Response.json({
           vast: { configured: true, source: 'plugin', managed_externally: true },
           controller_ready: true,
@@ -181,4 +184,40 @@ test('a failed provider status read can be retried without reporting missing set
   await page.getByRole('button', { name: 'Fleet', exact: true }).click()
   await page.getByRole('button', { name: 'Add compute', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Fleet overview' })).toBeVisible()
+})
+
+test('worker observations never promote a provisioning rental to verified inference', async ({
+  page,
+}) => {
+  await installMockBackend(page, { startRunning: true })
+  await page.addInitScript(() => {
+    const original = window.fetch
+    window.fetch = async (input, init) => {
+      if (String(input) === '/app/rentals')
+        return Response.json({
+          configured: true,
+          rental: {
+            instance_id: 123,
+            offer_id: 7,
+            target: { mesh_id: 'synthetic-mesh', node_id: 'local' },
+            expires_at: Date.now() / 1000 + 900,
+            stage: 'token_provisioning',
+            worker_status: {
+              phase: 'joined',
+              worker_running: true,
+              cache_file_bytes: 2000000000,
+              network_received_bytes: 3000000000,
+            },
+          },
+        })
+      return original(input, init)
+    }
+  })
+  await page.goto('/')
+  await page.getByTestId('nav-compute').click()
+  const rental = page.getByRole('region', { name: 'Owned rentals' })
+  await expect(rental).toContainText('inference not yet verified')
+  await expect(rental).toContainText('Worker-reported observations, not download completion.')
+  await expect(rental).toContainText('Model cache size:')
+  await expect(rental.getByRole('button', { name: 'Remove compute', exact: true })).toBeVisible()
 })

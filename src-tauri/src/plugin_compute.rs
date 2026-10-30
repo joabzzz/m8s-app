@@ -60,7 +60,7 @@ pub async fn status() -> Result<Value> {
         "token_provisioning"
     };
     Ok(
-        json!({"configured":true,"admission":"token-only-provider-trusted","rental":if s["attempt_consumed"]==true {json!({"stage":stage,"target":s["target"],"offer_id":s["offer_id"],"instance_id":s["instance_id"],"node_id":s["node_id"],"expires_at":s["expires_at"],"certificate_verified":false})}else{Value::Null}}),
+        json!({"configured":true,"admission":"token-only-provider-trusted","rental":if s["attempt_consumed"]==true {json!({"stage":stage,"worker_status":s["worker_status"],"target":s["target"],"offer_id":s["offer_id"],"instance_id":s["instance_id"],"node_id":s["node_id"],"expires_at":s["expires_at"],"certificate_verified":false})}else{Value::Null}}),
     )
 }
 

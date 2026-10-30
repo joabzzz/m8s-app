@@ -80,3 +80,13 @@ unsettled reservations. Do not label the current-mesh demo fully ready yet.
 Rental status now projects only closed startup milestones and a download-error
 label; it never forwards native log lines. A completed mesh-wide canary is labeled
 “Mesh inference verified”, not proof of readiness of an arbitrary new host.
+
+
+### Worker startup observations
+
+Plugin-backed rentals may display fresh, resource-bound worker observations
+while token provisioning is pending. Cache size and received bytes are counters,
+not download completion or inference readiness. Even a matching worker-reported
+mesh identity remains explicitly “inference not yet verified” until the existing
+owner-routed canary succeeds. Remove compute remains available during startup.
+The restricted SSH status command grants no interactive terminal access.
